@@ -30,6 +30,14 @@
 #define CONS_BG	(atg_colour){31, 31, 15, ATG_ALPHA_OPAQUE}
 #define PHAS_BG	(atg_colour){15, 31, 31, ATG_ALPHA_OPAQUE}
 
+const char *set_tbl[6]={
+"Baud Rates",
+"BW min max",
+"10   1   7",
+"30   5  22",
+"150 20  75",
+"750 50 480"};
+
 int pset(SDL_Surface *s, unsigned int x, unsigned int y, atg_colour c);
 int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, atg_colour c);
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
@@ -107,7 +115,7 @@ int main(int argc, char **argv)
 	SDL_EnableUNICODE(1);
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 	atg_box *mainbox=canvas->box;
-	atg_element *g_title=atg_create_element_label("3psk", 12, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+	atg_element *g_title=atg_create_element_label("3psk by Edward Cree M0TBK", 12, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
 	if(!g_title)
 	{
 		fprintf(stderr, "atg_create_element_label failed\n");
@@ -359,6 +367,37 @@ int main(int argc, char **argv)
 			return(1);
 		}
 		// TODO make spectrogram, other decoder bits?
+		atg_element *g_set_tbl=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
+		if(!g_set_tbl)
+		{
+			fprintf(stderr, "atg_create_element_box failed\n");
+			return(1);
+		}
+		if(atg_pack_element(g_db, g_set_tbl))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		b=g_set_tbl->elem.box;
+		if(!b)
+		{
+			fprintf(stderr, "g_set_tbl->elem.box==NULL\n");
+			return(1);
+		}
+		for(size_t i=0;i<6;i++)
+		{
+			atg_element *l=atg_create_element_label(set_tbl[i], 12, (atg_colour){239, 239, 255, ATG_ALPHA_OPAQUE});
+			if(!l)
+			{
+				fprintf(stderr, "atg_create_element_label failed\n");
+				return(1);
+			}
+			if(atg_pack_element(b, l))
+			{
+				perror("atg_pack_element");
+				return(1);
+			}
+		}
 	}
 	char *outtext[OUTLINES];
 	for(unsigned int i=0;i<OUTLINES;i++)
