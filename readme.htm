@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>3psk: README</title>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8;" />
+</head>
+<body>
+<div id="title">
+<h1>3psk: readme</h1>
+<h5>3PSK is a datamode for amateur radio, based on PSK</h5>
+<p>This is the user manual for the 3psk software.  For details of the 3PSK datamode, see the file <a href="spec">spec</a>.</p>
+</div><!--#title-->
+<div id="contents">
+<h2>Contents</h2>
+<ul>
+<li><a href="#foreword">Foreword</a></li>
+<li><a href="#controls">Controls</a></li>
+<li><a href="#hotkeys">Hotkeys</a></li>
+</ul>
+</div><!--#contents-->
+<div id="foreword">
+<h2>Foreword</h2>
+<p><strong><em><acronym title="3-pole Phase Shift Keying">3PSK</acronym></em></strong> is a conversational datamode for ham radio usage.  It is similar to the well-known mode <em><acronym title="Phase Shift Keying">PSK</acronym></em> (created by Peter Martinez G3PLX), but has the advantage that the baud rate does not need to be agreed on in advance, and can even be changed during an 'over'.  The corresponding disadvantage is a drop in effective <acronym title="Signal-to-Noise Ratio">SNR</acronym> of about 1.5<acronym title="decibels">dB</acronym>.</p>
+<p>The <tt>3psk</tt> software package implements this datamode, and has a (somewhat) user-friendly interface.  It should be started by running <tt>./pipe.sh</tt>.</p>
+</div><!--#foreword-->
+<div id="controls">
+<h2>Controls</h2>
+<p><tt>3psk</tt> is controlled chiefly through a GUI, which looks like this:</p>
+<img src="screenshot.png" />
+<p>The two graphics to the left indicate the operation of the decoder.  On the left is the <em>constellation diagram</em>, which should be familiar to most datamode users.  The points plotted on it represent the incoming signal (magnitude and phase), and form into a characteristic shape when a valid signal is received.  In the case of 3PSK, the characteristic shape is an equilateral triangle (sometimes with curved edges, if heavy filtering is present).</p>
+<p>The constellation diagram also shows something else, which is perhaps less familiar; each time a transition is accepted, a cyan line is drawn to mark it.  This is useful because a 3PSK decoder recovers each clock tick individually, and different failure modes have different effects on the recovery.  If no cyan lines at all are appearing, probably RXS is too high; if they're appearing in all directions, probably RXS is too low.  When correct decoding is taking place, the cyan lines should run to the vertices of the triangle, as can be seen in the above screenshot.</p>
+<p>To the right of the constellation diagram is the <em>frequency offset graph</em>.  This is mainly used for debugging the operation of the <acronym title="Automatic Frequency Control">AFC</acronym> and can probably be ignored.  Again, the screenshot shows normal operation; in this case, the graph stays close to the x-axis.</p>
+<p>Continuing to the right, we encounter the <em>codec controls</em>; at present, everything clickable is in this block.  The top row of buttons are toggles.  <tt>TX</tt> controls whether to Transmit or Receive.  <tt>MONI</tt> enables the monitor; that is, when transmitting, 3psk will decode its own outgoing audio.  <tt>AFC</tt> enables Automatic Frequency Control, which attempts to tune signals in (though it doesn't work very well).</p>
+<p>Below these toggle buttons is the <em>bandwidth selector</em>.  The four buttons each select a filter bandwidth (in Hz).  You need a wider bandwidth to decode signals at higher baud rates; the table to the right gives an indication of what speeds each bandwidth covers.</p>
+<p>Below this are the numeric controls.  Note that you can move them in larger increments by right-clicking the +/- buttons, or change them quickly by scrolling the mousewheel while hovering over them.  <tt>TXB</tt> is Transmit Baud rate.  <tt>TXF</tt> is Transmit Frequency (in Hz).  <tt>RXF</tt> is Receive Frequency, and is locked to <tt>TXF</tt> when the <tt>AFC</tt> is disabled.  <tt>RXS</tt> is Receive Sensitivity, the magic fudge factor you tweak to make the decoder work.  <tt>AMP</tt> is amplification, or gain.  <tt>RXB</tt> is the Receive Baud rate; that is, the number of transitions per second the decoder is accepting.  This should be stable when receiving a valid signal.</p>
+<p>The bottom of the screen consists of the output and input text areas.  Decoded text appears in white and scrolls upwards (6 lines of text are displayed).  Input text appears in red, then turns green after it has been transmitted; the input scrolls away to the left.</p>
+</div><!--#controls-->
+<div id="hotkeys">
+<h2>Hotkeys</h2>
+<p>The following hotkeys control <tt>3psk</tt>:</p>
+<dl>
+	<dt>F1</dt>
+		<dd>Sends macro 1, &quot;This is a test.  This is only a test.  Do not adjust your set.&quot;.</dd>
+	<dt>F7</dt>
+		<dd>Switches to Transmit mode.</dd>
+	<dt>F8</dt>
+		<dd>Switches to Receive mode.</dd>
+	<dt>Esc</dt>
+		<dd>Switches to Receive mode and discards buffered input.</dd>
+	<dt>Keypad Enter</dt>
+		<dd>Inserts a marker into the input stream; when this marker is reached, <tt>3psk</tt> switches to Receive mode.</dd>
+</dl>
+</div><!--#hotkeys-->
+</body>
+</html>
