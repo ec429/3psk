@@ -6,7 +6,7 @@
 */
 
 #include <stdio.h>
-//#include <stdlib.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
@@ -14,6 +14,7 @@
 #include <fftw3.h>
 
 #include "atg/atg.h"
+#include "atg/atg_internals.h"
 #include "wav.h"
 #include "bits.h"
 #include "varicode.h"
@@ -34,12 +35,10 @@ int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsi
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
 void addchar(char *intextleft, char *intextright, char what);
 void addstr(char *intextleft, char *intextright, const char *text);
+atg_element *create_selector(unsigned int *sel);
 
 int main(int argc, char **argv)
 {
-	double bw=150; // IF bandwidth, Hz
-	unsigned long blklen;
-	bool last=false;
 	double centre=440; // centre frequency, Hz
 	double aif=3000; // approximate IF, Hz
 	double slow=4.0;
@@ -48,17 +47,7 @@ int main(int argc, char **argv)
 	unsigned int txbaud=60;
 	for(int arg=1;arg<argc;arg++)
 	{
-		if(strncmp(argv[arg], "--bw=", 5)==0)
-		{
-			sscanf(argv[arg]+5, "%lg", &bw);
-			last=false;
-		}
-		else if(strncmp(argv[arg], "--blk=", 6)==0)
-		{
-			sscanf(argv[arg]+6, "%lu", &blklen);
-			last=true;
-		}
-		else if(strncmp(argv[arg], "--freq=", 7)==0)
+		if(strncmp(argv[arg], "--freq=", 7)==0)
 		{
 			sscanf(argv[arg]+7, "%lg", &centre);
 		}
@@ -79,7 +68,6 @@ int main(int argc, char **argv)
 		else if(strncmp(argv[arg], "--am=", 5)==0)
 		{
 			sscanf(argv[arg]+5, "%lg", &am);
-			last=false;
 		}
 		else if(strncmp(argv[arg], "--txb=", 6)==0)
 		{
@@ -143,6 +131,8 @@ int main(int argc, char **argv)
 	}
 	char *g_bauds=NULL, *g_rxf=NULL;
 	bool *g_tx=NULL;
+	unsigned int bwsel=2;
+	atg_element *g_bw=NULL;
 	SDL_Surface *g_constel_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 120, 120, canvas->surface->format->BitsPerPixel, canvas->surface->format->Rmask, canvas->surface->format->Gmask, canvas->surface->format->Bmask, canvas->surface->format->Amask);
 	if(!g_constel_img)
 	{
@@ -264,7 +254,18 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_txbaud=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 300, 1, txbaud, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		g_bw=create_selector(&bwsel);
+		if(!g_afc)
+		{
+			fprintf(stderr, "create_selector failed\n");
+			return(1);
+		}
+		if(atg_pack_element(b, g_bw))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *g_txbaud=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 600, 1, txbaud, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_txbaud)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -276,7 +277,7 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 300, 600, 10, txcentre, "TXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		atg_element *g_txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, txcentre, "TXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_txf)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -457,9 +458,8 @@ int main(int argc, char **argv)
 	}
 	
 	fprintf(stderr, "frontend: Audio sample rate: %lu Hz\n", (unsigned long)w.sample_rate);
-	if(!last)
-		blklen=floor(w.sample_rate/bw);
-	bw=w.sample_rate/(double)blklen;
+	unsigned long blklen=floor(w.sample_rate/150.0);
+	double bw=w.sample_rate/(double)blklen;
 	
 	fprintf(stderr, "frontend: FFT block length: %lu samples\n", blklen);
 	if(blklen>4095)
@@ -471,10 +471,17 @@ int main(int argc, char **argv)
 	unsigned long k = max(floor((aif * (double)blklen / (double)w.sample_rate)+0.5), 1);
 	double truif=(k*w.sample_rate/(double)blklen);
 	fprintf(stderr, "frontend: Actual IF: %g Hz\n", truif);
-	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex) * blklen);
-	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex) * blklen);
+	blklen=floor(w.sample_rate/10.0);
+	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*blklen);
+	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*blklen);
 	fftw_set_timelimit(2.0);
 	fftw_plan p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	blklen=floor(w.sample_rate/30.0);
+	p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	blklen=floor(w.sample_rate/750.0);
+	p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	blklen=floor(w.sample_rate/150.0);
+	p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	long wzero=zeroval(w);
 	
 	fprintf(stderr, "Setting up decoder\n");
@@ -692,7 +699,33 @@ int main(int argc, char **argv)
 							atg_ev_value value=e.event.value;
 							if(value.e)
 							{
-								if(value.e->userdata)
+								if(value.e==g_bw)
+								{
+									bw=(double[4]){10, 30, 150, 750}[value.value];
+									blklen=floor(w.sample_rate/bw);
+									bw=w.sample_rate/(double)blklen;
+									fprintf(stderr, "frontend: new FFT block length: %lu samples\n", blklen);
+									if(blklen>4095)
+									{
+										fprintf(stderr, "frontend: new FFT block length too long.  Exiting\n");
+										return(1);
+									}
+									fprintf(stderr, "frontend: new filter bandwidth is %g Hz\n", bw);
+									k=max(floor((aif * (double)blklen / (double)w.sample_rate)+0.5), 1);
+									truif=(k*w.sample_rate/(double)blklen);
+									fprintf(stderr, "frontend: new Actual IF: %g Hz\n", truif);
+									p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+									gsf=250.0/(double)blklen;
+									sens=(double)blklen/16.0;
+									SDL_FillRect(g_constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(g_constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
+									for(size_t i=0;i<CONSLEN;i++)
+									{
+										points[i]=0;
+										lined[i]=false;
+									}
+									fprintf(stderr, "frontend: all ready to go with new bandwidth\n");
+								}
+								else if(value.e->userdata)
 								{
 									if(strcmp((const char *)value.e->userdata, "SLOW")==0)
 									{
@@ -705,7 +738,8 @@ int main(int argc, char **argv)
 									else if(strcmp((const char *)value.e->userdata, "TXFREQ")==0)
 									{
 										txcentre=value.value;
-										snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
+										if(!afc)
+											snprintf(g_rxf, 8, "RXF %03d", (int)floor((centre=txcentre)+.5));
 									}
 									else if(strcmp((const char *)value.e->userdata, "AMP")==0)
 									{
@@ -912,4 +946,123 @@ void addchar(char *intextleft, char *intextright, char what)
 void addstr(char *intextleft, char *intextright, const char *text)
 {
 	while(*text) addchar(intextleft, intextright, *text++);
+}
+
+/* Data for the selector */
+const char *sel_labels[4]={"10","30","150","750"};
+atg_colour sel_colours[4]={{31, 31, 95, 0}, {95, 31, 31, 0}, {95, 95, 15, 0}, {31, 159, 31, 0}};
+
+/* Prototype for the selector renderer */
+SDL_Surface *selector_render_callback(const struct atg_element *e);
+
+/* Prototype for the click handler */
+void selector_match_click_callback(struct atg_event_list *list, atg_element *element, SDL_MouseButtonEvent button, unsigned int xoff, unsigned int yoff);
+
+/* Function to create a custom 'selector' widget, which behaves like a radiobutton list */
+atg_element *create_selector(unsigned int *sel)
+{
+	atg_element *rv=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){7, 7, 7, ATG_ALPHA_OPAQUE}); /* Start with an atg_box */
+	if(!rv) return(NULL);
+	rv->type=ATG_CUSTOM; /* Mark it as a custom widget, so that our callbacks will be used */
+	rv->render_callback=selector_render_callback; /* Connect up our renderer callback */
+	rv->match_click_callback=selector_match_click_callback; /* Connect up our click-handling callback */
+	atg_box *b=rv->elem.box;
+	if(!b)
+	{
+		atg_free_element(rv);
+		return(NULL);
+	}
+	for(unsigned int i=0;i<4;i++) /* The widget is a row of four buttons */
+	{
+		atg_colour fg=sel_colours[i];
+		/* Create the button */
+		atg_element *btn=atg_create_element_button(sel_labels[i], fg, (atg_colour){7, 7, 7, ATG_ALPHA_OPAQUE});
+		if(!btn)
+		{
+			atg_free_element(rv);
+			return(NULL);
+		}
+		/* Pack it into the box */
+		if(atg_pack_element(b, btn))
+		{
+			atg_free_element(rv);
+			return(NULL);
+		}
+	}
+	rv->userdata=sel; /* sel stores the currently selected value */
+	return(rv);
+}
+
+/* Function to render the 'selector' widget */
+SDL_Surface *selector_render_callback(const struct atg_element *e)
+{
+	if(!e) return(NULL);
+	if(!(e->type==ATG_CUSTOM)) return(NULL);
+	atg_box *b=e->elem.box;
+	if(!b) return(NULL);
+	if(!b->elems) return(NULL);
+	/* Set the background colours */
+	for(unsigned int i=0;i<b->nelems;i++)
+	{
+		if(e->userdata)
+		{
+			if(*(unsigned int *)e->userdata==i)
+				b->elems[i]->elem.button->content->bgcolour=(atg_colour){159, 159, 159, ATG_ALPHA_OPAQUE};
+			else
+				b->elems[i]->elem.button->content->bgcolour=(atg_colour){7, 7, 7, ATG_ALPHA_OPAQUE};
+		}
+		else
+			b->elems[i]->elem.button->content->bgcolour=(atg_colour){7, 7, 7, ATG_ALPHA_OPAQUE};
+	}
+	/* Hand off the actual rendering to atg_render_box */
+	return(atg_render_box(e));
+}
+
+/* Function to handle clicks within the 'selector' widget */
+void selector_match_click_callback(struct atg_event_list *list, atg_element *element, SDL_MouseButtonEvent button, unsigned int xoff, unsigned int yoff)
+{
+	atg_box *b=element->elem.box;
+	if(!b->elems) return;
+	struct atg_event_list sub_list={.list=NULL, .last=NULL}; /* Sub-list to catch all the events generated by our child elements */
+	for(unsigned int i=0;i<b->nelems;i++) /* For each child element... */
+		atg__match_click_recursive(&sub_list, b->elems[i], button, xoff+element->display.x, yoff+element->display.y); /* ...pass it the click and let it generate trigger events into our sub-list */
+	unsigned int oldsel=0;
+	if(element->userdata) oldsel=*(unsigned int *)element->userdata;
+	while(sub_list.list) /* Iterate over the sub-list */
+	{
+		atg_event event=sub_list.list->event;
+		if(event.type==ATG_EV_TRIGGER)
+		/* We're only interested in trigger events */
+		{
+			if(event.event.trigger.button==ATG_MB_LEFT)
+			/* Left-click on a button selects that value */
+			{
+				for(unsigned int i=0;i<b->nelems;i++)
+				{
+					if(event.event.trigger.e==b->elems[i])
+					{
+						if(element->userdata) *(unsigned int *)element->userdata=i;
+					}
+				}
+			}
+			else if(event.event.trigger.button==ATG_MB_SCROLLDN)
+			/* Scrolling over the selector cycles through the values */
+			{
+				if(element->userdata) *(unsigned int *)element->userdata=(1+*(unsigned int *)element->userdata)%b->nelems;
+			}
+			else if(event.event.trigger.button==ATG_MB_SCROLLUP)
+			/* Cycle in the opposite direction */
+			{
+				if(element->userdata) *(unsigned int *)element->userdata=(b->nelems-1+*(unsigned int *)element->userdata)%b->nelems;
+			}
+		}
+		/* Get the next element from the sub-list */
+		atg__event_list *next=sub_list.list->next;
+		free(sub_list.list);
+		sub_list.list=next;
+	}
+	if(element->userdata&&(*(unsigned int *)element->userdata!=oldsel))
+	{
+		atg__push_event(list, (atg_event){.type=ATG_EV_VALUE, .event.value=(atg_ev_value){.e=element, .value=*(unsigned int *)element->userdata}});
+	}
 }
