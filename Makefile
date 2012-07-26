@@ -1,7 +1,7 @@
 # Makefile for 3psk, 3-pole Phase Shift Keying
 CC := gcc
 CFLAGS := -Wall -Wextra -Werror -pedantic -std=gnu99 -g `sdl-config --cflags`
-LIBS := -lm -lfftw3 `sdl-config --libs` -lSDL_ttf -lSDL_image
+LIBS := -lm -lfftw3 `sdl-config --libs` -lSDL_ttf
 OBJS := wav.o bits.o atg/atg.o varicode.o strbuf.o
 INCLUDES := $(OBJS:.o=.h)
 
