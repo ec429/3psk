@@ -19,7 +19,8 @@
 #include "bits.h"
 #include "varicode.h"
 
-#define CONSLEN	32
+#define CONSLEN	1024
+#define CONSDLEN	((int)floor(CONSLEN*min(bw, 750)/750))
 #define BITBUFLEN	16
 #define PHASLEN	25
 
@@ -121,6 +122,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "atg_create_element_label failed\n");
 		return(1);
 	}
+	g_title->cache=true;
 	if(atg_pack_element(mainbox, g_title))
 	{
 		perror("atg_pack_element");
@@ -373,6 +375,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "atg_create_element_box failed\n");
 			return(1);
 		}
+		g_set_tbl->cache=true;
 		if(atg_pack_element(g_db, g_set_tbl))
 		{
 			perror("atg_pack_element");
@@ -568,18 +571,18 @@ int main(int argc, char **argv)
 	{
 		if(!(t%blklen))
 		{
-			static unsigned int frame=0;
+			static unsigned int frame=0, lastflip=0;
 			fftw_execute(p);
 			int x,y;
-			ztoxy(points[frame%CONSLEN], gsf, &x, &y);
-			if(lined[frame%CONSLEN]) line(g_constel_img, x, y, 60, 60, CONS_BG);
+			ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
+			if(lined[frame%CONSDLEN]) line(g_constel_img, x, y, 60, 60, CONS_BG);
 			pset(g_constel_img, x, y, CONS_BG);
-			fftw_complex half=points[(frame+(CONSLEN>>1))%CONSLEN];
+			fftw_complex half=points[(frame+(CONSDLEN>>1))%CONSDLEN];
 			ztoxy(half, gsf, &x, &y);
 			atg_colour c=(cabs(half)>sens)?(atg_colour){0, 127, 0, ATG_ALPHA_OPAQUE}:(atg_colour){127, 0, 0, ATG_ALPHA_OPAQUE};
-			if(lined[(frame+(CONSLEN>>1))%CONSLEN]) line(g_constel_img, x, y, 60, 60, (atg_colour){0, 95, 95, ATG_ALPHA_OPAQUE});
+			if(lined[(frame+(CONSDLEN>>1))%CONSDLEN]) line(g_constel_img, x, y, 60, 60, (atg_colour){0, 95, 95, ATG_ALPHA_OPAQUE});
 			pset(g_constel_img, x, y, c);
-			ztoxy(points[frame%CONSLEN]=fftout[k], gsf, &x, &y);
+			ztoxy(points[frame%CONSDLEN]=fftout[k], gsf, &x, &y);
 			bool green=cabs(fftout[k])>sens;
 			bool enough=false;
 			double da=0;
@@ -587,8 +590,8 @@ int main(int argc, char **argv)
 				enough=(fabs(da=carg(fftout[k]/lastsym))>(fch?M_PI*2/3.0:M_PI/2));
 			else
 				enough=true;
-			fftw_complex dz=fftout[k]-points[(frame+CONSLEN-1)%CONSLEN];
-			if((lined[frame%CONSLEN]=(green&&enough&&(fch||(cabs(dz)<cabs(fftout[k])*blklen/(slow*25.0))))))
+			fftw_complex dz=fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN];
+			if((lined[frame%CONSDLEN]=(green&&enough&&(fch||(cabs(dz)<cabs(fftout[k])*blklen/(slow*25.0))))))
 			{
 				line(g_constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
 				line(g_phasing_img, 0, 60, g_phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
@@ -660,8 +663,10 @@ int main(int argc, char **argv)
 			}
 			fch=false;
 			pset(g_constel_img, x, y, green?(atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE}:(atg_colour){255, 0, 0, ATG_ALPHA_OPAQUE});
-			if(!(frame++%2))
+			frame++;
+			if(t>(lastflip+w.sample_rate/8))
 			{
+				lastflip+=w.sample_rate/8;
 				if(g_tx) *g_tx=transmit;
 				atg_flip(canvas);
 				atg_event e;
@@ -893,7 +898,7 @@ int main(int argc, char **argv)
 			double ft=t*2*M_PI*txcentre/w.sample_rate;
 			double tx=cos(ft+txphi)*txmag/3.0;
 			if(wzero) tx+=0.5;
-			write_sample(w, stdout, tx*(1<<w.bits_per_sample));
+			write_sample(w, stdout, tx*(1<<w.bits_per_sample)*.8);
 			if(moni) si=tx*(1<<w.bits_per_sample)*.6-wzero;
 		}
 		else
