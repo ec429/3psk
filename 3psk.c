@@ -20,7 +20,11 @@
 
 #define CONSLEN	32
 #define BITBUFLEN	16
-#define PHASLEN	32
+#define PHASLEN	50
+
+#define INLINELEN	80
+#define OUTLINELEN	80
+#define OUTLINES	6
 
 #define CONS_BG	(atg_colour){31, 31, 15, ATG_ALPHA_OPAQUE}
 #define PHAS_BG	(atg_colour){15, 31, 31, ATG_ALPHA_OPAQUE}
@@ -28,6 +32,7 @@
 int pset(SDL_Surface *s, unsigned int x, unsigned int y, atg_colour c);
 int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, atg_colour c);
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
+void addchar(char *intextleft, char *intextright, char what);
 
 int main(int argc, char **argv)
 {
@@ -38,6 +43,8 @@ int main(int argc, char **argv)
 	double aif=3000; // approximate IF, Hz
 	double slow=1.0;
 	double am=1.0;
+	bool moni=false;
+	unsigned int txbaud=31;
 	for(int arg=1;arg<argc;arg++)
 	{
 		if(strncmp(argv[arg], "--bw=", 5)==0)
@@ -73,19 +80,31 @@ int main(int argc, char **argv)
 			sscanf(argv[arg]+5, "%lg", &am);
 			last=false;
 		}
+		else if(strncmp(argv[arg], "--txb=", 6)==0)
+		{
+			sscanf(argv[arg]+6, "%u", &txbaud);
+		}
+		else if(strcmp(argv[arg], "--moni")==0)
+		{
+			moni=true;
+		}
 		else
 		{
 			fprintf(stderr, "Unrecognised arg `%s'\n", argv[arg]);
 			return(1);
 		}
 	}
+	double txcentre=centre;
 	fprintf(stderr, "Constructing GUI\n");
-	atg_canvas *canvas=atg_create_canvas(320, 240, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+	atg_canvas *canvas=atg_create_canvas(480, 240, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
 	if(!canvas)
 	{
 		fprintf(stderr, "atg_create_canvas failed\n");
 		return(1);
 	}
+	SDL_WM_SetCaption("3PSK", "3PSK");
+	SDL_EnableUNICODE(1);
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 	atg_box *mainbox=canvas->box;
 	atg_element *g_title=atg_create_element_label("3psk: 0000Hz", 12, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
 	if(!g_title)
@@ -183,7 +202,19 @@ int main(int argc, char **argv)
 			fprintf(stderr, "g_controls->elem.box==NULL\n");
 			return(1);
 		}
-		atg_element *g_slow=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 128, 1, floor(slow*32+.5), "ST %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		atg_element *g_txbaud=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 300, 1, txbaud, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!g_txbaud)
+		{
+			fprintf(stderr, "atg_create_element_spinner failed\n");
+			return(1);
+		}
+		g_txbaud->userdata="TXBAUD";
+		if(atg_pack_element(b, g_txbaud))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *g_slow=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 128, 1, floor(slow*32+.5), "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_slow)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -195,7 +226,7 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_baud_label=atg_create_element_label("000 baud", 12, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+		atg_element *g_baud_label=atg_create_element_label("RXB 000", 15, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
 		if(!g_baud_label)
 		{
 			fprintf(stderr, "atg_create_element_label failed\n");
@@ -219,8 +250,91 @@ int main(int argc, char **argv)
 		}
 		// TODO make spectrogram, other decoder bits?
 	}
+	char *outtext[OUTLINES];
+	for(unsigned int i=0;i<OUTLINES;i++)
+	{
+		atg_element *line=atg_create_element_label(NULL, 8, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+		if(!line)
+		{
+			fprintf(stderr, "atg_create_element_label failed\n");
+			return(1);
+		}
+		if(!line->elem.label)
+		{
+			fprintf(stderr, "line->elem.label==NULL\n");
+			return(1);
+		}
+		outtext[i]=line->elem.label->text=malloc(OUTLINELEN+2);
+		if(!outtext[i])
+		{
+			fprintf(stderr, "outtext[i]==NULL\n");
+			return(1);
+		}
+		outtext[i][0]=' ';
+		outtext[i][1]=0;
+		if(atg_pack_element(mainbox, line))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+	}
+	char intextleft[INLINELEN+2]=" ", intextright[INLINELEN+1]="";
+	atg_element *in_line=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){7, 7, 31, ATG_ALPHA_OPAQUE});
+	if(!in_line)
+	{
+		fprintf(stderr, "atg_create_element_box failed\n");
+		return(1);
+	}
+	if(atg_pack_element(mainbox, in_line))
+	{
+		perror("atg_pack_element");
+		return(1);
+	}
+	else
+	{
+		atg_box *b=in_line->elem.box;
+		if(!b)
+		{
+			fprintf(stderr, "in_line->elem.box==NULL\n");
+			return(1);
+		}
+		atg_element *left=atg_create_element_label(NULL, 8, (atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE});
+		if(!left)
+		{
+			fprintf(stderr, "atg_create_element_label failed\n");
+			return(1);
+		}
+		if(!left->elem.label)
+		{
+			fprintf(stderr, "left->elem.label==NULL\n");
+			return(1);
+		}
+		left->elem.label->text=intextleft;
+		if(atg_pack_element(b, left))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *right=atg_create_element_label(NULL, 8, (atg_colour){255, 127, 0, ATG_ALPHA_OPAQUE});
+		if(!right)
+		{
+			fprintf(stderr, "atg_create_element_label failed\n");
+			return(1);
+		}
+		if(!right->elem.label)
+		{
+			fprintf(stderr, "right->elem.label==NULL\n");
+			return(1);
+		}
+		right->elem.label->text=intextright;
+		if(atg_pack_element(b, right))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+	}
 	
-	fprintf(stderr, "Setting up frontend\n");
+	fprintf(stderr, "Setting up decoder frontend\n");
 	wavhdr w;
 	if(read_wh44(stdin, &w))
 	{
@@ -255,8 +369,8 @@ int main(int argc, char **argv)
 	long wzero=zeroval(w);
 	
 	fprintf(stderr, "Setting up decoder\n");
-	double gsf=250.0/blklen;
-	double sens=10.0/blklen;
+	double gsf=250.0/(double)blklen;
+	double sens=(double)blklen/16.0;
 	
 	fftw_complex points[CONSLEN];
 	bool lined[CONSLEN];
@@ -281,6 +395,12 @@ int main(int argc, char **argv)
 	for(size_t i=0;i<PHASLEN;i++)
 		symtime[i]=0;
 	bool st_loop=false;
+	
+	bool transmit=false;
+	double txphi=0;
+	bbuf txbits={0, NULL};
+	unsigned int txsetp=0;
+	unsigned int txlead=0;
 	
 	if(write_wh44(stdout, w))
 	{
@@ -325,7 +445,7 @@ int main(int argc, char **argv)
 				line(g_phasing_img, da_ptr*g_phasing_img->w/PHASLEN, py, (da_ptr+1)*g_phasing_img->w/PHASLEN, py, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
 				unsigned int dt=t-symtime[st_ptr];
 				double baud=w.sample_rate*(st_loop?PHASLEN:st_ptr)/(double)dt;
-				snprintf(g_bauds, 9, "%03d baud", (int)floor(baud+.5));
+				snprintf(g_bauds, 8, "RXB %03d", (int)floor(baud+.5));
 				symtime[st_ptr]=t;
 				st_ptr=(st_ptr+1)%PHASLEN;
 				if(!st_ptr) st_loop=true;
@@ -353,7 +473,30 @@ int main(int argc, char **argv)
 				char *text=decode((bbuf){.nbits=bitbufp, .data=bitbuf}, &ubits);
 				if(*text)
 				{
-					fprintf(stderr, "%s", text);
+					size_t tp=strlen(outtext[OUTLINES-1]);
+					for(const char *p=text;*p;p++)
+					{
+						if((*p=='\n')||(tp>OUTLINELEN))
+						{
+							for(unsigned int i=0;i<OUTLINES-1;i++)
+								strcpy(outtext[i], outtext[i+1]);
+							outtext[OUTLINES-1][0]=' ';
+							outtext[OUTLINES-1][1]=0;
+							tp=1;
+						}
+						if(*p=='\t')
+						{
+							outtext[OUTLINES-1][tp++]=' ';
+							while((tp<OUTLINELEN)&&((tp-1)&3))
+								outtext[OUTLINES-1][tp++]=' ';
+							outtext[OUTLINES-1][tp]=0;
+						}
+						else if(*p!='\n')
+						{
+							outtext[OUTLINES-1][tp++]=*p;
+							outtext[OUTLINES-1][tp]=0;
+						}
+					}
 				}
 				bitbufp-=ubits;
 				for(unsigned int i=0;i<bitbufp;i++)
@@ -377,6 +520,45 @@ int main(int argc, char **argv)
 								case SDL_QUIT:
 									errupt=1;
 								break;
+								case SDL_KEYDOWN:
+									switch(s.key.keysym.sym)
+									{
+										case SDLK_F7:
+											transmit=true;
+											txlead=8;
+										break;
+										case SDLK_F8:
+											transmit=false;
+										break;
+										case SDLK_ESCAPE:
+											transmit=false;
+											intextright[0]=0;
+										break;
+										case SDLK_F9:
+											centre=txcentre;
+											snprintf(g_title_label, 13, "3psk: %4dHz", (int)floor(centre+.5));
+										break;
+										case SDLK_BACKSPACE:
+										{
+											size_t tp=strlen(intextright);
+											if(tp) intextright[tp-1]=0;
+										}
+										break;
+										case SDLK_RETURN:
+											addchar(intextleft, intextright, '\n');
+										break;
+										case SDLK_KP_ENTER:
+											addchar(intextleft, intextright, '\r');
+										break;
+										default:
+											if((s.key.keysym.unicode&0xFF80)==0)
+											{
+												char what=s.key.keysym.unicode&0x7F;
+												addchar(intextleft, intextright, what);
+											}
+										break;
+									}
+								break;
 							}
 						break;
 						case ATG_EV_TRIGGER:;
@@ -398,6 +580,10 @@ int main(int argc, char **argv)
 									{
 										slow=value.value/32.0;
 									}
+									else if(strcmp((const char *)value.e->userdata, "TXBAUD")==0)
+									{
+										txbaud=value.value;
+									}
 								}
 							}
 						break;
@@ -408,11 +594,85 @@ int main(int argc, char **argv)
 			}
 		}
 		long si=read_sample(w, stdin)-wzero;
+		if(transmit)
+		{
+			if(((t*txbaud)%w.sample_rate)<txbaud)
+			{
+				if(txlead)
+				{
+					txlead--;
+					txsetp=(txsetp+2)%3;
+				}
+				else
+				{
+					if(!txbits.data) txbits.nbits=0;
+					if(*intextright&&!txbits.nbits)
+					{
+						free(txbits.data);
+						const char buf[2]={*intextright, 0};
+						size_t ll=strlen(intextleft);
+						if(ll>INLINELEN)
+						{
+							size_t i;
+							for(i=1;i+20<ll;i++)
+								intextleft[i]=intextleft[i+20];
+							intextleft[i]=0;
+							ll=i;
+						}
+						intextleft[ll++]=*intextright;
+						intextleft[ll]=0;
+						if(*intextright=='\r')
+						{
+							transmit=false;
+							txbits=(bbuf){0, NULL};
+						}
+						else
+							txbits=encode(buf);
+						for(size_t i=0;intextright[i];i++)
+							intextright[i]=intextright[i+1];
+					}
+					if(txbits.nbits)
+					{
+						bool b=*txbits.data;
+						txbits.nbits--;
+						for(size_t i=0;i<txbits.nbits;i++)
+							txbits.data[i]=txbits.data[i+1];
+						txsetp=(txsetp+(b?1:2))%3;
+					}
+					else
+					{
+						txsetp=(txsetp+2)%3;
+					}
+				}
+			}
+			double sweep=txbaud*M_PI*1.5/(double)w.sample_rate;
+			double txaim=txsetp*M_PI*2/3.0;
+			if((txphi>txaim-M_PI)&&(txphi<=txaim))
+				txphi=min(txphi+sweep, txaim);
+			else if(txphi>txaim+M_PI)
+				txphi=fmod(txphi+sweep, M_PI*2);
+			else if(txphi<=txaim-M_PI)
+				txphi=fmod(txphi+M_PI*2-sweep, M_PI*2);
+			else if((txphi>txaim)&&(txphi<=txaim+M_PI))
+				txphi=max(txphi-sweep, txaim);
+			else
+			{
+				fprintf(stderr, "Impossible txphi/aim relationship!\n");
+				txphi=txaim;
+			}
+			double txmag=cos(M_PI/3)/cos(fmod(txphi, M_PI*2/3.0)-M_PI/3.0);
+			double ft=t*2*M_PI*txcentre/w.sample_rate;
+			double tx=cos(ft+txphi)*txmag/3.0;
+			if(wzero) tx+=0.5;
+			write_sample(w, stdout, tx*(1<<w.bits_per_sample));
+			if(moni) si=tx*(1<<w.bits_per_sample)*.6-wzero;
+		}
+		else
+			write_sample(w, stdout, wzero);
 		if(wzero) si<<=1;
 		double sv=si/(double)(1<<w.bits_per_sample);
 		double phi=t*2*M_PI*(truif-centre)/w.sample_rate;
 		fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*am;
-		write_sample(w, stdout, wzero);
 	}
 	fprintf(stderr, "\n");
 	return(0);
@@ -469,4 +729,26 @@ void ztoxy(fftw_complex z, double gsf, int *x, int *y)
 {
 	if(x) *x=creal(z)*gsf+60;
 	if(y) *y=cimag(z)*gsf+60;
+}
+
+void addchar(char *intextleft, char *intextright, char what)
+{
+	size_t tp=strlen(intextright);
+	if(tp<INLINELEN)
+	{
+		intextright[tp++]=what;
+		intextright[tp]=0;
+		size_t ll=strlen(intextleft);
+		if(tp+ll>=INLINELEN)
+		{
+			size_t i;
+			for(i=1;i+20<ll;i++)
+				intextleft[i]=intextleft[i+20];
+			intextleft[i]=0;
+		}
+	}
+	else
+	{
+		fprintf(stderr, "Input overrun - discarded char %hhd\n", what);
+	}
 }
