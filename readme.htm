@@ -8,7 +8,7 @@
 <div id="title">
 <h1>3psk: readme</h1>
 <h5>3PSK is a datamode for amateur radio, based on PSK</h5>
-<p>This is the user manual for the 3psk software.  For details of the 3PSK datamode, see the file <a href="spec">spec</a>.</p>
+<p>This is the user manual for the 3psk software.  For details of the 3PSK datamode, see the <a href="spec_3psk.htm">spec</a>.</p>
 </div><!--#title-->
 <div id="contents">
 <h2>Contents</h2>
@@ -16,6 +16,7 @@
 <li><a href="#foreword">Foreword</a></li>
 <li><a href="#controls">Controls</a></li>
 <li><a href="#hotkeys">Hotkeys</a></li>
+<li><a href="#depends">Dependencies</a></li>
 </ul>
 </div><!--#contents-->
 <div id="foreword">
@@ -40,7 +41,8 @@
 <p>The following hotkeys control <tt>3psk</tt>:</p>
 <dl>
 	<dt>F1</dt>
-		<dd>Sends macro 1, &quot;This is a test.  This is only a test.  Do not adjust your set.&quot;.</dd>
+		<dd>Sends macro 1, &quot;This is a test.  This is only a test.  Do not adjust your set.&quot;.<br />
+		More useful macros (and customisation thereof) are planned for a future version.</dd>
 	<dt>F7</dt>
 		<dd>Switches to Transmit mode.</dd>
 	<dt>F8</dt>
@@ -51,5 +53,16 @@
 		<dd>Inserts a marker into the input stream; when this marker is reached, <tt>3psk</tt> switches to Receive mode.</dd>
 </dl>
 </div><!--#hotkeys-->
+<div id="depends">
+<h2>Dependencies</h2>
+<p>In order to compile and run <tt>3psk</tt>, you will need:</p>
+<ul>
+	<li>libsdl (the Simple DirectMedia Library), <a href="http://www.libsdl.org">http://www.libsdl.org</a>.</li>
+	<li>SDL_ttf (the SDL TrueType Font library), <a href="http://www.libsdl.org/projects/SDL_ttf">http://www.libsdl.org/projects/SDL_ttf</a>.</li>
+	<li>FFTW3 (the Fastest Fourier Transform in the West), <a href="http://www.fftw.org">http://www.fftw.org</a>.</li>
+	<li>libatg (A Tiny Gui library for SDL), on <a href="https://github.com/ec429/libatg">GitHub</a>.  Because libatg hasn't been libtool'd yet, this will need to be symlinked from the 3psk directory as <tt>atg/</tt>, eg. by running <blockquote><tt>~/Downloads/3psk $ ln -s ~/Downloads/atg atg</tt></blockquote></li>
+	<li><tt>aplay</tt> and <tt>arecord</tt>, or similar utilities for playing and recording WAV files.  If using utilities other than these two, you will need to modify <tt>pipe.sh</tt>.</li>
+</ul>
+</div><!--#depends-->
 </body>
 </html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>3PSK Specification</title>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8;" />
+</head>
+<body>
+<div id="title">
+<h1>3PSK Specification</h1>
+<h5>3PSK is a datamode for amateur radio, based on PSK</h5>
+<p>This is the specification of the 3PSK datamode.  For the user manual for the 3psk software, see the <a href="readme.htm">readme</a>.</p>
+<p>This is version 0.3, dated 26th July 2012.</p>
+</div><!--#title-->
+<div id="abstract">
+<h2>Abstract</h2>
+<p>The author presents a modified form of PSK (Phase Shift Keying), a popular mode for textual conversation over radio links (especially Amateur Radio), and gives details of its implementation and testing.</p>
+</div><!--#abstract-->
+<div id="contents">
+<h2>Contents</h2>
+<ul>
+<li><a href="#abstract">Abstract</a></li>
+<li><a href="#rationale">Rationale</a></li>
+<li><a href="#fundamentals">Fundamentals</a></li>
+<li><a href="#theory">Theoretical Considerations</a></li>
+<li><a href="#implementation">Implementation</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div><!--#contents-->
+<div id="rationale">
+<h2>Rationale</h2>
+<p><acronym title="Bipolar Phase Shift Keying, 31 baud">BPSK31</acronym> (also known as "Varicode", properly its encoding alphabet), the data mode developed by Peter Martinez <a href="#refs-G3PLX">[G3PLX]</a>, has many advantages which make it widely used in the Amateur Radio community and elsewhere; these include its narrow bandwidth (and consequent resilience in weak-signal or noisy conditions) and simplicity of operation.  However, the baud rate must be agreed beforehand by all parties in the conversation, and is generally fixed by convention at 31.25 baud.  Also, it is necessary for the receiving station to recover the clock signal by means of a phase-locked loop, and since not every bit involves a reversal, an error can cascade for several symbols or even characters before it is corrected.  While these are not severe problems (and have done little to hinder uptake of the mode), the existence of a system which averts these problems without considerably reducing the other advantages is clearly a useful and worthwhile prospect.</p>
+<p>The system detailed below has thus far received little 'on air' testing.  Details of such tests as have been performed are given later.</p>
+</div><!--#rationale-->
+<div id="fundamentals">
+<h2>Fundamentals</h2>
+<p>3PSK, or 3-pole Phase Shift Keying, is unusual among keying methods in that its number of states is not a power of two.  The reason for this is simple: while each symbol encodes only a single bit, it is possible to ensure that every symbol differs from the one preceding it; in other words, there is a transition for every symbol.</p>
+<p>The encoding used is differential; a 1 shifts the phase 'forward' 120&deg; (2&pi;/3 radians), while a 0 shifts it 'backward' the same amount.  Each character is first encoded with the Varicode alphabet of BPSK31, then sent as phase information in this form.  The baud rate is not defined by the specification, since the receiving end does not need to know it - it can simply detect transitions and read the direction of phase change in each case.  It is not even necessary to recover a clock signal - which means the sending station may even vary its bitrate during a transmission.  However, an implementation might choose to attempt to synchronise a clock in order to better guard against spurious symbols caused by noise; the author has not found such synchronisation necessary in his own implementation.</p>
+<p>It would, of course, be possible to suddenly and immediately change the phase at each transition, however this would generate wide-band interference of the kind known as &quot;key clicks&quot;; for this reason 3PSK, like PSK31, changes the phase smoothly, in essence increasing or decreasing the frequency slightly for a fraction of the symbol duration and then returning it to its centre value.  It is necessary to ensure that only part of the symbol duration is used for this smooth transition, as the most efficacious method of receiver decoding involves checking that the phase is stable before accepting a transition.  The smoothing effect may either be integrated into the signal generation, or produced by filtering afterwards; the effect is similar in either case.  Generated signals <em>SHOULD</em> complete the transition in at most one-half of the symbol duration.</p>
+</div><!--#fundamentals-->
+<div id="theory">
+<h2>Theoretical Considerations</h2>
+<p>It must be stressed that the gains provided by 3PSK are not, mathematically speaking, 'free'; there is a drop in signal-to-noise performance due to the fact that we are only carrying 1 bit of data from a channel with 3 states (i.e., log<sub>2</sub>(3) &asymp; 1.58 bits); thus the signal-to-noise ratio is effectively worsened by about 1.5<acronym title="decibels">dB</acronym>.  However, this can usually be made up for with only a small reduction in baud rate (and hence bandwidth), and since this is usually much smaller than the 'steps' between the various agreed-upon BPSK baud rates, 3PSK should typically outperform BPSK in most operational conditions.  For instance, if speed is simply not required, the lowest BPSK can go is typically 31.25 baud, whereas 3PSK can be operated at speeds right down to 1 baud, which, if suitably narrow filters are used, can reasonably be expected to punch through even in the presence of very heavy noise; certainly the gain by using less than a sixth of the bandwidth more than offsets the 1.5dB cost for the extra state.  A possible further refinement would be 5-, 9-, 17- etc. phase keying: the cost of the extra symbol is reduced in each case as it is spread over more data bits, but higher order PSK generally performs worse in noisy conditions, which may cancel out this benefit in some use cases.  Further discussion of these matters may be forthcoming in the future.</p>
+</div><!--#theory-->
+<div id="implementation">
+<h2>Implementation</h2>
+<p>The author's own implementation, 3psk <a href="refs-PROG">[PROG]</a>, is a single monolithic executable, but it is also possible to implement 3PSK with separate programs for transmitting and receiving.  In any case the two functions may be considered separately.</p>
+<h3>Transmitting</h3>
+<p>Given a stream of bits to transmit (Varicode with perhaps intervening runs of 0s), each bit is of course sent with a phase transition.  This is produced by moving a complex value <em>z</em> along the sides of an equilateral triangle (whose centre is at 0); the vertices represent the three stable phases.  The audio is then generated as |<em>z</em>|&times;cos(2&pi;<em>ft</em>+arg(<em>z</em>)), where <em>f</em> is the centre frequency and <em>t</em> is time.  Given the phase arg(<em>z</em>), the magnitude |<em>z</em>| = <sup>cos(&pi;/3)</sup><big>/</big><sub>cos(fmod(arg(<em>z</em>), 2&pi;/3)-&pi;/3)</sub>, where fmod is the (real) modulo function.</p>
+<h3>Receiving</h3>
+<p>The incoming audio is first heterodyned (mixed up) to an <acronym title="Intermediate Frequency">IF</acronym> of about 3kHz, by pointwise multiplication by <em>e</em><sup>2&pi;<em>ift</em></sup>; then an FFT is taken with a block length set so that the required bandwidth is covered by precisely one FFT 'bin' (the resulting wide-binned FFT is also the reason why the IF is only <em>approximately</em> 3kHz; the actual value is chosen to lie in the centre of a bin).  The (complex) output from this FFT bin is then taken as the position <em>z</em> on the constellation diagram.</p>
+<p>A transition is accepted whenever all of the following conditions are met:</p>
+<ol type="I">
+<li>The radius |<em>z</em>| exceeds a set minimum (points on the constellation for which this is true are plotted in <span style="color:green;">green</span>, else <span style="color:red;">red</span>).</li>
+<li>The change in modulus arg(<em>z</em>) from the last accepted symbol is at least &pi;/2 radians (90&deg;).</li>
+<li>The rate of change |<em>dz</em>| is less than <em>k</em>&times;|<em>z</em>|, where <em>k</em> is a parameter inversely proportional to the <tt><strong>RXS</strong></tt> setting.</li>
+</ol>
+<p>The direction of the transition is then ascertained by assuming it was less than &pi; radians (180&deg;).</p>
+</div><!--#implementation-->
+<div id="testing">
+<h2>Testing</h2>
+<p></p>
+</div><!--#testing-->
+<div id="conclusion">
+<h2>Conclusion</h2>
+<p></p>
+</div><!--#conclusion-->
+<div id="references">
+<h2>References</h2>
+<dl>
+<dt id="refs-G3PLX">[G3PLX]</dt>
+	<dd><em>&quot;PSK31: A new radio-teletype mode with a traditional philosophy&quot;</em>, Peter Martinez G3PLX.  A <acronym title="Portable Document Format">PDF</acronym> can be found <a href="http://det.bi.ehu.es/~jtpjatae/pdf/p31g3plx.pdf">online</a>.  The article was originally published in RadCom in two parts, in the Dec 1998 and Feb 1999 issues.</dd>
+<dt id="refs-PROG">[PROG]</dt>
+	<dd>The author's implementation of 3PSK is called <tt>3psk</tt>, and can be found on <a href="https://github.com/ec429/3psk">GitHub</a>.</dd>
+</dl>
+</div><!--#references-->
+</body>
+</html>
