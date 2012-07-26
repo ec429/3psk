@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_slow=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 128, 1, floor(slow*32+.5), "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		atg_element *g_slow=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 512, 1, floor(slow*32+.5), "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_slow)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
