@@ -36,15 +36,15 @@ void addchar(char *intextleft, char *intextright, char what);
 
 int main(int argc, char **argv)
 {
-	double bw=100; // IF bandwidth, Hz
+	double bw=150; // IF bandwidth, Hz
 	unsigned long blklen;
 	bool last=false;
 	double centre=440; // centre frequency, Hz
 	double aif=3000; // approximate IF, Hz
-	double slow=1.0;
-	double am=1.0;
-	bool moni=false;
-	unsigned int txbaud=31;
+	double slow=4.0;
+	double am=1.2;
+	bool moni=false, afc=false;
+	unsigned int txbaud=60;
 	for(int arg=1;arg<argc;arg++)
 	{
 		if(strncmp(argv[arg], "--bw=", 5)==0)
@@ -87,6 +87,10 @@ int main(int argc, char **argv)
 		else if(strcmp(argv[arg], "--moni")==0)
 		{
 			moni=true;
+		}
+		else if(strcmp(argv[arg], "--afc")==0)
+		{
+			afc=true;
 		}
 		else
 		{
@@ -141,6 +145,7 @@ int main(int argc, char **argv)
 		return(1);
 	}
 	char *g_bauds=NULL;
+	bool *g_tx=NULL;
 	SDL_Surface *g_constel_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 120, 120, canvas->surface->format->BitsPerPixel, canvas->surface->format->Rmask, canvas->surface->format->Gmask, canvas->surface->format->Bmask, canvas->surface->format->Amask);
 	if(!g_constel_img)
 	{
@@ -202,6 +207,66 @@ int main(int argc, char **argv)
 			fprintf(stderr, "g_controls->elem.box==NULL\n");
 			return(1);
 		}
+		atg_element *g_btns1=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){31, 23, 23, ATG_ALPHA_OPAQUE});
+		if(!g_btns1)
+		{
+			fprintf(stderr, "atg_create_element_box failed\n");
+			return(1);
+		}
+		if(atg_pack_element(b, g_btns1))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_box *bb1=g_btns1->elem.box;
+		if(!bb1)
+		{
+			fprintf(stderr, "g_btns1->elem.box==NULL\n");
+			return(1);
+		}
+		atg_element *g_tx_t=atg_create_element_toggle("TX", false, (atg_colour){191, 0, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!g_tx_t)
+		{
+			fprintf(stderr, "atg_create_element_toggle failed\n");
+			return(1);
+		}
+		atg_toggle *t=g_tx_t->elem.toggle;
+		if(!t)
+		{
+			fprintf(stderr, "g_tx_t->elem.toggle==NULL\n");
+			return(1);
+		}
+		g_tx=&t->state;
+		g_tx_t->userdata="TX";
+		if(atg_pack_element(bb1, g_tx_t))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *g_moni=atg_create_element_toggle("MONI", moni, (atg_colour){0, 191, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!g_moni)
+		{
+			fprintf(stderr, "atg_create_element_toggle failed\n");
+			return(1);
+		}
+		g_moni->userdata="MONI";
+		if(atg_pack_element(bb1, g_moni))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *g_afc=atg_create_element_toggle("AFC", moni, (atg_colour){191, 127, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!g_afc)
+		{
+			fprintf(stderr, "atg_create_element_toggle failed\n");
+			return(1);
+		}
+		g_afc->userdata="AFC";
+		if(atg_pack_element(bb1, g_afc))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
 		atg_element *g_txbaud=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 300, 1, txbaud, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_txbaud)
 		{
@@ -222,6 +287,18 @@ int main(int argc, char **argv)
 		}
 		g_slow->userdata="SLOW";
 		if(atg_pack_element(b, g_slow))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *g_amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, floor(am*5+.5), "AMP %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!g_amp)
+		{
+			fprintf(stderr, "atg_create_element_spinner failed\n");
+			return(1);
+		}
+		g_amp->userdata="AMP";
+		if(atg_pack_element(b, g_amp))
 		{
 			perror("atg_pack_element");
 			return(1);
@@ -450,7 +527,7 @@ int main(int argc, char **argv)
 				st_ptr=(st_ptr+1)%PHASLEN;
 				if(!st_ptr) st_loop=true;
 				da_ptr=(da_ptr+1)%PHASLEN;
-				if(!da_ptr)
+				if(afc&&!da_ptr)
 				{
 					double ch=(t_da/(double)PHASLEN)*5.0;
 					if(fabs(ch)>1.0)
@@ -507,6 +584,7 @@ int main(int argc, char **argv)
 			pset(g_constel_img, x, y, green?(atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE}:(atg_colour){255, 0, 0, ATG_ALPHA_OPAQUE});
 			if(!(frame++%2))
 			{
+				if(g_tx) *g_tx=transmit;
 				atg_flip(canvas);
 				atg_event e;
 				while(atg_poll_event(&e, canvas))
@@ -584,6 +662,39 @@ int main(int argc, char **argv)
 									{
 										txbaud=value.value;
 									}
+									else if(strcmp((const char *)value.e->userdata, "AMP")==0)
+									{
+										am=value.value/5.0;
+									}
+									else
+										fprintf(stderr, "Changed an unknown spinner!\n");
+								}
+							}
+						break;
+						case ATG_EV_TOGGLE:;
+							atg_ev_toggle toggle=e.event.toggle;
+							if(toggle.e)
+							{
+								if(toggle.e->userdata)
+								{
+									if(strcmp((const char *)toggle.e->userdata, "TX")==0)
+									{
+										transmit=toggle.state;
+									}
+									else if(strcmp((const char *)toggle.e->userdata, "MONI")==0)
+									{
+										moni=toggle.state;
+									}
+									else if(strcmp((const char *)toggle.e->userdata, "AFC")==0)
+									{
+										if(!(afc=toggle.state))
+										{
+											centre=txcentre;
+											snprintf(g_title_label, 13, "3psk: %4dHz", (int)floor(centre+.5));
+										}
+									}
+									else
+										fprintf(stderr, "Clicked on unknown toggle '%s'!\n", (const char *)toggle.e->userdata);
 								}
 							}
 						break;
