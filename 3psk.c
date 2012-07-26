@@ -35,9 +35,9 @@ const char *set_tbl[6]={
 "Baud Rates",
 "BW min max",
 "10   1   7",
-"30   5  22",
-"150 20  75",
-"750 50 480"};
+"30   1  22",
+"150  4  75",
+"750 40 400"};
 
 int pset(SDL_Surface *s, unsigned int x, unsigned int y, atg_colour c);
 int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, atg_colour c);
@@ -50,8 +50,8 @@ int main(int argc, char **argv)
 {
 	double centre=440; // centre frequency, Hz
 	double aif=3000; // approximate IF, Hz
-	double slow=4.0;
-	double am=1.2;
+	unsigned int slow=28;
+	double am=2.0;
 	bool moni=true, afc=false;
 	unsigned int txbaud=60;
 	for(int arg=1;arg<argc;arg++)
@@ -62,13 +62,7 @@ int main(int argc, char **argv)
 		}
 		else if(strncmp(argv[arg], "--slow=", 7)==0)
 		{
-			sscanf(argv[arg]+7, "%lg", &slow);
-		}
-		else if(strncmp(argv[arg], "--st=", 5)==0)
-		{
-			unsigned long st=32;
-			sscanf(argv[arg]+5, "%lu", &st);
-			slow=st/32.0;
+			sscanf(argv[arg]+7, "%u", &slow);
 		}
 		else if(strncmp(argv[arg], "--if=", 5)==0)
 		{
@@ -322,7 +316,7 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_slow=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 512, 1, floor(slow*32+.5), "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		atg_element *g_slow=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 1, 64, 1, slow, "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_slow)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -513,17 +507,16 @@ int main(int argc, char **argv)
 	unsigned long k = max(floor((aif * (double)blklen / (double)w.sample_rate)+0.5), 1);
 	double truif=(k*w.sample_rate/(double)blklen);
 	fprintf(stderr, "frontend: Actual IF: %g Hz\n", truif);
-	blklen=floor(w.sample_rate/10.0);
-	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*blklen);
-	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*blklen);
+	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/10.0));
+	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/10.0));
 	fftw_set_timelimit(2.0);
-	fftw_plan p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
-	blklen=floor(w.sample_rate/30.0);
-	p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
-	blklen=floor(w.sample_rate/750.0);
-	p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
-	blklen=floor(w.sample_rate/150.0);
-	p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	fprintf(stderr, "frontend: Preparing FFT plans\n");
+	fftw_plan p[4];
+	p[0]=fftw_plan_dft_1d(floor(w.sample_rate/10.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	p[1]=fftw_plan_dft_1d(floor(w.sample_rate/30.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	p[2]=fftw_plan_dft_1d(floor(w.sample_rate/150.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	p[3]=fftw_plan_dft_1d(floor(w.sample_rate/750.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	fprintf(stderr, "frontend: Ready\n");
 	long wzero=zeroval(w);
 	
 	fprintf(stderr, "Setting up decoder\n");
@@ -572,7 +565,7 @@ int main(int argc, char **argv)
 		if(!(t%blklen))
 		{
 			static unsigned int frame=0, lastflip=0;
-			fftw_execute(p);
+			fftw_execute(p[bwsel]);
 			int x,y;
 			ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
 			if(lined[frame%CONSDLEN]) line(g_constel_img, x, y, 60, 60, CONS_BG);
@@ -591,7 +584,7 @@ int main(int argc, char **argv)
 			else
 				enough=true;
 			fftw_complex dz=fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN];
-			if((lined[frame%CONSDLEN]=(green&&enough&&(fch||(cabs(dz)<cabs(fftout[k])*blklen/(slow*25.0))))))
+			if((lined[frame%CONSDLEN]=(green&&enough&&(fch||(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)slow-32)/4.0)*2e4))))))
 			{
 				line(g_constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
 				line(g_phasing_img, 0, 60, g_phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
@@ -758,7 +751,6 @@ int main(int argc, char **argv)
 									k=max(floor((aif * (double)blklen / (double)w.sample_rate)+0.5), 1);
 									truif=(k*w.sample_rate/(double)blklen);
 									fprintf(stderr, "frontend: new Actual IF: %g Hz\n", truif);
-									p=fftw_plan_dft_1d(blklen, fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 									gsf=250.0/(double)blklen;
 									sens=(double)blklen/16.0;
 									SDL_FillRect(g_constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(g_constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
@@ -773,7 +765,7 @@ int main(int argc, char **argv)
 								{
 									if(strcmp((const char *)value.e->userdata, "SLOW")==0)
 									{
-										slow=value.value/32.0;
+										slow=value.value;
 									}
 									else if(strcmp((const char *)value.e->userdata, "TXBAUD")==0)
 									{
