@@ -20,7 +20,7 @@
 
 #define CONSLEN	32
 #define BITBUFLEN	16
-#define PHASLEN	50
+#define PHASLEN	25
 
 #define INLINELEN	80
 #define OUTLINELEN	80
@@ -33,6 +33,7 @@ int pset(SDL_Surface *s, unsigned int x, unsigned int y, atg_colour c);
 int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, atg_colour c);
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
 void addchar(char *intextleft, char *intextright, char what);
+void addstr(char *intextleft, char *intextright, const char *text);
 
 int main(int argc, char **argv)
 {
@@ -43,7 +44,7 @@ int main(int argc, char **argv)
 	double aif=3000; // approximate IF, Hz
 	double slow=4.0;
 	double am=1.2;
-	bool moni=false, afc=false;
+	bool moni=true, afc=false;
 	unsigned int txbaud=60;
 	for(int arg=1;arg<argc;arg++)
 	{
@@ -88,9 +89,17 @@ int main(int argc, char **argv)
 		{
 			moni=true;
 		}
+		else if(strcmp(argv[arg], "--no-moni")==0)
+		{
+			moni=false;
+		}
 		else if(strcmp(argv[arg], "--afc")==0)
 		{
 			afc=true;
+		}
+		else if(strcmp(argv[arg], "--no-afc")==0)
+		{
+			afc=false;
 		}
 		else
 		{
@@ -110,7 +119,7 @@ int main(int argc, char **argv)
 	SDL_EnableUNICODE(1);
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 	atg_box *mainbox=canvas->box;
-	atg_element *g_title=atg_create_element_label("3psk: 0000Hz", 12, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+	atg_element *g_title=atg_create_element_label("3psk", 12, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
 	if(!g_title)
 	{
 		fprintf(stderr, "atg_create_element_label failed\n");
@@ -121,18 +130,6 @@ int main(int argc, char **argv)
 		perror("atg_pack_element");
 		return(1);
 	}
-	if(!g_title->elem.label)
-	{
-		fprintf(stderr, "g_title->elem.label==NULL!\n");
-		return(1);
-	}
-	char *g_title_label=g_title->elem.label->text;
-	if(!g_title_label)
-	{
-		fprintf(stderr, "g_title_label==NULL!\n");
-		return(1);
-	}
-	snprintf(g_title_label, 13, "3psk: %4dHz", (int)floor(centre+.5));
 	atg_element *g_decoder=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
 	if(!g_decoder)
 	{
@@ -144,7 +141,7 @@ int main(int argc, char **argv)
 		perror("atg_pack_element");
 		return(1);
 	}
-	char *g_bauds=NULL;
+	char *g_bauds=NULL, *g_rxf=NULL;
 	bool *g_tx=NULL;
 	SDL_Surface *g_constel_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 120, 120, canvas->surface->format->BitsPerPixel, canvas->surface->format->Rmask, canvas->surface->format->Gmask, canvas->surface->format->Bmask, canvas->surface->format->Amask);
 	if(!g_constel_img)
@@ -255,7 +252,7 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_afc=atg_create_element_toggle("AFC", moni, (atg_colour){191, 127, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		atg_element *g_afc=atg_create_element_toggle("AFC", afc, (atg_colour){191, 127, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
 		if(!g_afc)
 		{
 			fprintf(stderr, "atg_create_element_toggle failed\n");
@@ -275,6 +272,41 @@ int main(int argc, char **argv)
 		}
 		g_txbaud->userdata="TXBAUD";
 		if(atg_pack_element(b, g_txbaud))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *g_txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 300, 600, 10, txcentre, "TXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!g_txf)
+		{
+			fprintf(stderr, "atg_create_element_spinner failed\n");
+			return(1);
+		}
+		g_txf->userdata="TXFREQ";
+		if(atg_pack_element(b, g_txf))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *g_rxf_label=atg_create_element_label("RXF 000", 15, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+		if(!g_rxf_label)
+		{
+			fprintf(stderr, "atg_create_element_label failed\n");
+			return(1);
+		}
+		if(!g_rxf_label->elem.label)
+		{
+			fprintf(stderr, "g_rxf_label->elem.label==NULL\n");
+			return(1);
+		}
+		g_rxf=g_rxf_label->elem.label->text;
+		if(!g_rxf)
+		{
+			fprintf(stderr, "g_rxf==NULL\n");
+			return(1);
+		}
+		snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
+		if(atg_pack_element(b, g_rxf_label))
 		{
 			perror("atg_pack_element");
 			return(1);
@@ -529,11 +561,11 @@ int main(int argc, char **argv)
 				da_ptr=(da_ptr+1)%PHASLEN;
 				if(afc&&!da_ptr)
 				{
-					double ch=(t_da/(double)PHASLEN)*5.0;
-					if(fabs(ch)>1.0)
+					double ch=(t_da/(double)PHASLEN)*10.0;
+					if(fabs(ch)>0.5)
 					{
 						centre+=ch;
-						snprintf(g_title_label, 13, "3psk: %4dHz", (int)floor(centre+.5));
+						snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
 						fch=true;
 					}
 					t_da=0;
@@ -601,6 +633,14 @@ int main(int argc, char **argv)
 								case SDL_KEYDOWN:
 									switch(s.key.keysym.sym)
 									{
+										case SDLK_F1:
+											addstr(intextleft, intextright, "This is a test.  This is only a test.  Do not adjust your set.\n\r");
+											if(!transmit)
+											{
+												transmit=true;
+												txlead=8;
+											}
+										break;
 										case SDLK_F7:
 											transmit=true;
 											txlead=8;
@@ -614,7 +654,7 @@ int main(int argc, char **argv)
 										break;
 										case SDLK_F9:
 											centre=txcentre;
-											snprintf(g_title_label, 13, "3psk: %4dHz", (int)floor(centre+.5));
+											snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
 										break;
 										case SDLK_BACKSPACE:
 										{
@@ -662,6 +702,11 @@ int main(int argc, char **argv)
 									{
 										txbaud=value.value;
 									}
+									else if(strcmp((const char *)value.e->userdata, "TXFREQ")==0)
+									{
+										txcentre=value.value;
+										snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
+									}
 									else if(strcmp((const char *)value.e->userdata, "AMP")==0)
 									{
 										am=value.value/5.0;
@@ -690,7 +735,7 @@ int main(int argc, char **argv)
 										if(!(afc=toggle.state))
 										{
 											centre=txcentre;
-											snprintf(g_title_label, 13, "3psk: %4dHz", (int)floor(centre+.5));
+											snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
 										}
 									}
 									else
@@ -862,4 +907,9 @@ void addchar(char *intextleft, char *intextright, char what)
 	{
 		fprintf(stderr, "Input overrun - discarded char %hhd\n", what);
 	}
+}
+
+void addstr(char *intextleft, char *intextright, const char *text)
+{
+	while(*text) addchar(intextleft, intextright, *text++);
 }
