@@ -1,1 +1,1 @@
-arecord -fS16_LE -r16000 | ./3psk "$@" | aplay -B 2000000
+arecord -fS16_LE -r16000 | ./3psk "$@" | aplay -B 1000000

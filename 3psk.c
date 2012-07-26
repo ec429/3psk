@@ -597,7 +597,7 @@ int main(int argc, char **argv)
 				old_da[da_ptr]=(da<0)?da+M_PI*4/3.0:da;
 				t_da+=old_da[da_ptr]-M_PI*2/3.0;
 				py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
-				line(g_phasing_img, da_ptr*g_phasing_img->w/PHASLEN, py, (da_ptr+1)*g_phasing_img->w/PHASLEN, py, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+				line(g_phasing_img, da_ptr*g_phasing_img->w/PHASLEN, py, (da_ptr+1)*g_phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
 				unsigned int dt=t-symtime[st_ptr];
 				double baud=w.sample_rate*(st_loop?PHASLEN:st_ptr)/(double)dt;
 				snprintf(g_bauds, 8, "RXB %03d", (int)floor(baud+.5));
