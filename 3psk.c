@@ -18,6 +18,7 @@
 #include "wav.h"
 #include "bits.h"
 #include "varicode.h"
+#include "strbuf.h"
 
 #define CONSLEN	1024
 #define CONSDLEN	((int)floor(CONSLEN*min(bw, 750)/750))
@@ -25,6 +26,7 @@
 #define PHASLEN	25
 
 #define INLINELEN	80
+#define INLINES		6
 #define OUTLINELEN	80
 #define OUTLINES	6
 
@@ -35,15 +37,13 @@ const char *set_tbl[6]={
 "Baud Rates",
 "BW min max",
 "10   1   7",
-"30   1  22",
+"30   1  20",
 "150  4  75",
 "750 40 400"};
 
 int pset(SDL_Surface *s, unsigned int x, unsigned int y, atg_colour c);
 int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, atg_colour c);
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
-void addchar(char *intextleft, char *intextright, char what);
-void addstr(char *intextleft, char *intextright, const char *text);
 atg_element *create_selector(unsigned int *sel);
 
 int main(int argc, char **argv)
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 	}
 	double txcentre=centre;
 	fprintf(stderr, "Constructing GUI\n");
-	atg_canvas *canvas=atg_create_canvas(480, 240, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+	atg_canvas *canvas=atg_create_canvas(480, 320, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
 	if(!canvas)
 	{
 		fprintf(stderr, "atg_create_canvas failed\n");
@@ -133,10 +133,10 @@ int main(int argc, char **argv)
 		perror("atg_pack_element");
 		return(1);
 	}
-	char *g_bauds=NULL, *g_rxf=NULL;
+	char *g_bauds=NULL;
 	bool *g_tx=NULL;
 	unsigned int bwsel=2;
-	atg_element *g_bw=NULL;
+	atg_element *g_bw=NULL, *g_spl=NULL, *g_rxf=NULL;
 	SDL_Surface *g_constel_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 120, 120, canvas->surface->format->BitsPerPixel, canvas->surface->format->Rmask, canvas->surface->format->Gmask, canvas->surface->format->Bmask, canvas->surface->format->Amask);
 	if(!g_constel_img)
 	{
@@ -258,6 +258,18 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
+		g_spl=atg_create_element_toggle("SPL", false, (atg_colour){191, 191, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!g_spl)
+		{
+			fprintf(stderr, "atg_create_element_toggle failed\n");
+			return(1);
+		}
+		g_spl->userdata="SPL";
+		if(atg_pack_element(bb1, g_spl))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
 		g_bw=create_selector(&bwsel);
 		if(!g_afc)
 		{
@@ -293,25 +305,14 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_rxf_label=atg_create_element_label("RXF 000", 15, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
-		if(!g_rxf_label)
-		{
-			fprintf(stderr, "atg_create_element_label failed\n");
-			return(1);
-		}
-		if(!g_rxf_label->elem.label)
-		{
-			fprintf(stderr, "g_rxf_label->elem.label==NULL\n");
-			return(1);
-		}
-		g_rxf=g_rxf_label->elem.label->text;
+		g_rxf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, centre, "RXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_rxf)
 		{
-			fprintf(stderr, "g_rxf==NULL\n");
+			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
-		if(atg_pack_element(b, g_rxf_label))
+		g_rxf->userdata="RXFREQ";
+		if(atg_pack_element(b, g_rxf))
 		{
 			perror("atg_pack_element");
 			return(1);
@@ -410,10 +411,9 @@ int main(int argc, char **argv)
 			fprintf(stderr, "line->elem.label==NULL\n");
 			return(1);
 		}
-		outtext[i]=line->elem.label->text=malloc(OUTLINELEN+2);
-		if(!outtext[i])
+		if(!(outtext[i]=line->elem.label->text=malloc(OUTLINELEN+2)))
 		{
-			fprintf(stderr, "outtext[i]==NULL\n");
+			perror("malloc");
 			return(1);
 		}
 		outtext[i][0]=' ';
@@ -424,59 +424,84 @@ int main(int argc, char **argv)
 			return(1);
 		}
 	}
-	char intextleft[INLINELEN+2]=" ", intextright[INLINELEN+1]="";
-	atg_element *in_line=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){7, 7, 31, ATG_ALPHA_OPAQUE});
-	if(!in_line)
+	char *intextleft[INLINES], *intextright[INLINES];
+	char *inr, *ing; size_t inrl, inri, ingl, ingi;
+	init_char(&inr, &inrl, &inri);
+	init_char(&ing, &ingl, &ingi);
+	for(unsigned int i=0;i<INLINES;i++)
 	{
-		fprintf(stderr, "atg_create_element_box failed\n");
-		return(1);
-	}
-	if(atg_pack_element(mainbox, in_line))
-	{
-		perror("atg_pack_element");
-		return(1);
-	}
-	else
-	{
-		atg_box *b=in_line->elem.box;
-		if(!b)
+		atg_element *in_line=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){7, 7, 31, ATG_ALPHA_OPAQUE});
+		if(!in_line)
 		{
-			fprintf(stderr, "in_line->elem.box==NULL\n");
+			fprintf(stderr, "atg_create_element_box failed\n");
 			return(1);
 		}
-		atg_element *left=atg_create_element_label(NULL, 8, (atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE});
-		if(!left)
-		{
-			fprintf(stderr, "atg_create_element_label failed\n");
-			return(1);
-		}
-		if(!left->elem.label)
-		{
-			fprintf(stderr, "left->elem.label==NULL\n");
-			return(1);
-		}
-		left->elem.label->text=intextleft;
-		if(atg_pack_element(b, left))
+		if(atg_pack_element(mainbox, in_line))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *right=atg_create_element_label(NULL, 8, (atg_colour){255, 127, 0, ATG_ALPHA_OPAQUE});
-		if(!right)
+		else
 		{
-			fprintf(stderr, "atg_create_element_label failed\n");
-			return(1);
-		}
-		if(!right->elem.label)
-		{
-			fprintf(stderr, "right->elem.label==NULL\n");
-			return(1);
-		}
-		right->elem.label->text=intextright;
-		if(atg_pack_element(b, right))
-		{
-			perror("atg_pack_element");
-			return(1);
+			atg_box *b=in_line->elem.box;
+			if(!b)
+			{
+				fprintf(stderr, "in_line->elem.box==NULL\n");
+				return(1);
+			}
+			atg_element *lsp=atg_create_element_label(" ", 8, (atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE});
+			if(!lsp)
+			{
+				fprintf(stderr, "atg_create_element_label failed\n");
+				return(1);
+			}
+			if(atg_pack_element(b, lsp))
+			{
+				perror("atg_pack_element");
+				return(1);
+			}
+			atg_element *left=atg_create_element_label(NULL, 8, (atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE});
+			if(!left)
+			{
+				fprintf(stderr, "atg_create_element_label failed\n");
+				return(1);
+			}
+			if(!left->elem.label)
+			{
+				fprintf(stderr, "left->elem.label==NULL\n");
+				return(1);
+			}
+			if(!(intextleft[i]=left->elem.label->text=malloc(INLINELEN+1)))
+			{
+				perror("malloc");
+				return(1);
+			}
+			if(atg_pack_element(b, left))
+			{
+				perror("atg_pack_element");
+				return(1);
+			}
+			atg_element *right=atg_create_element_label(NULL, 8, (atg_colour){255, 127, 0, ATG_ALPHA_OPAQUE});
+			if(!right)
+			{
+				fprintf(stderr, "atg_create_element_label failed\n");
+				return(1);
+			}
+			if(!right->elem.label)
+			{
+				fprintf(stderr, "right->elem.label==NULL\n");
+				return(1);
+			}
+			if(!(intextright[i]=right->elem.label->text=malloc(INLINELEN+1)))
+			{
+				perror("malloc");
+				return(1);
+			}
+			if(atg_pack_element(b, right))
+			{
+				perror("atg_pack_element");
+				return(1);
+			}
 		}
 	}
 	
@@ -607,7 +632,11 @@ int main(int argc, char **argv)
 					if(fabs(ch)>0.5)
 					{
 						centre+=ch;
-						snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
+						if(g_rxf&&(g_rxf->type==ATG_SPINNER))
+						{
+							atg_spinner *s=g_rxf->elem.spinner;
+							if(s) s->value=floor(centre+.5);
+						}
 						fch=true;
 					}
 					t_da=0;
@@ -661,6 +690,58 @@ int main(int argc, char **argv)
 			{
 				lastflip+=w.sample_rate/8;
 				if(g_tx) *g_tx=transmit;
+				if(g_spl&&(g_spl->type==ATG_TOGGLE)&&g_spl->elem.toggle)
+					g_spl->elem.toggle->state=(centre!=txcentre);
+				if(true)
+				{
+					if(ingi>((INLINES+1)*INLINELEN))
+					{
+						ingi-=INLINELEN;
+						memmove(ing, ing+INLINELEN, ingi);
+					}
+					for(unsigned int i=0;i<INLINES;i++)
+						intextleft[i][0]=intextright[i][0]=0;
+					unsigned int x=0,y=0;
+					for(size_t p=0;p<ingi;p++)
+					{
+						intextleft[y][x++]=ing[p];
+						intextleft[y][x]=0;
+						if((ing[p]=='\n')||(x>=INLINELEN))
+						{
+							if(y<INLINES-1)
+								y++;
+							else
+							{
+								for(unsigned int i=0;i<y;i++)
+									strcpy(intextleft[i], intextleft[i+1]);
+								intextleft[y][0]=0;
+							}
+							x=0;
+						}
+					}
+					unsigned int sx=0;
+					for(size_t p=0;p<inri;p++)
+					{
+						x++;
+						intextright[y][sx++]=inr[p];
+						intextright[y][sx]=0;
+						if((inr[p]=='\n')||(x>=INLINELEN))
+						{
+							if(y<INLINES-1)
+								y++;
+							else
+							{
+								for(unsigned int i=0;i<y;i++)
+								{
+									strcpy(intextleft[i], intextleft[i+1]);
+									strcpy(intextright[i], intextright[i+1]);
+								}
+								intextleft[y][0]=intextright[y][0]=0;
+							}
+							x=sx=0;
+						}
+					}
+				}
 				atg_flip(canvas);
 				atg_event e;
 				while(atg_poll_event(&e, canvas))
@@ -678,45 +759,49 @@ int main(int argc, char **argv)
 									switch(s.key.keysym.sym)
 									{
 										case SDLK_F1:
-											addstr(intextleft, intextright, "This is a test.  This is only a test.  Do not adjust your set.\n\r");
+											append_str(&inr, &inrl, &inri, "This is a test.  This is only a test.  Do not adjust your set.\n\r");
 											if(!transmit)
 											{
 												transmit=true;
-												txlead=8;
+												txlead=max(txbaud/2, 8);
 											}
 										break;
 										case SDLK_F7:
 											transmit=true;
-											txlead=8;
+											txlead=max(txbaud/2, 8);
 										break;
 										case SDLK_F8:
 											transmit=false;
 										break;
 										case SDLK_ESCAPE:
 											transmit=false;
-											intextright[0]=0;
+											inri=0;
 										break;
 										case SDLK_F9:
 											centre=txcentre;
-											snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
+											if(g_rxf&&(g_rxf->type==ATG_SPINNER))
+											{
+												atg_spinner *s=g_rxf->elem.spinner;
+												if(s) s->value=floor(centre+.5);
+											}
 										break;
 										case SDLK_BACKSPACE:
 										{
-											size_t tp=strlen(intextright);
-											if(tp) intextright[tp-1]=0;
+											if(inri) inr[--inri]=0;
 										}
 										break;
 										case SDLK_RETURN:
-											addchar(intextleft, intextright, '\n');
+											append_char(&inr, &inrl, &inri, '\n');
 										break;
 										case SDLK_KP_ENTER:
-											addchar(intextleft, intextright, '\r');
+											append_char(&inr, &inrl, &inri, '\r');
 										break;
 										default:
 											if((s.key.keysym.unicode&0xFF80)==0)
 											{
 												char what=s.key.keysym.unicode&0x7F;
-												addchar(intextleft, intextright, what);
+												if(what)
+													append_char(&inr, &inrl, &inri, what);
 											}
 										break;
 									}
@@ -773,9 +858,21 @@ int main(int argc, char **argv)
 									}
 									else if(strcmp((const char *)value.e->userdata, "TXFREQ")==0)
 									{
+										bool spl=(centre!=txcentre);
 										txcentre=value.value;
-										if(!afc)
-											snprintf(g_rxf, 8, "RXF %03d", (int)floor((centre=txcentre)+.5));
+										if(!spl)
+										{
+											centre=txcentre;
+											if(g_rxf&&(g_rxf->type==ATG_SPINNER))
+											{
+												atg_spinner *s=g_rxf->elem.spinner;
+												if(s) s->value=floor(centre+.5);
+											}
+										}
+									}
+									else if(strcmp((const char *)value.e->userdata, "RXFREQ")==0)
+									{
+										centre=value.value;
 									}
 									else if(strcmp((const char *)value.e->userdata, "AMP")==0)
 									{
@@ -802,10 +899,18 @@ int main(int argc, char **argv)
 									}
 									else if(strcmp((const char *)toggle.e->userdata, "AFC")==0)
 									{
-										if(!(afc=toggle.state))
+										afc=toggle.state;
+									}
+									else if(strcmp((const char *)toggle.e->userdata, "SPL")==0)
+									{
+										if(!toggle.state)
 										{
 											centre=txcentre;
-											snprintf(g_rxf, 8, "RXF %03d", (int)floor(centre+.5));
+											if(g_rxf&&(g_rxf->type==ATG_SPINNER))
+											{
+												atg_spinner *s=g_rxf->elem.spinner;
+												if(s) s->value=floor(centre+.5);
+											}
 										}
 									}
 									else
@@ -832,30 +937,21 @@ int main(int argc, char **argv)
 				else
 				{
 					if(!txbits.data) txbits.nbits=0;
-					if(*intextright&&!txbits.nbits)
+					if(inr&&inri&&!txbits.nbits)
 					{
 						free(txbits.data);
-						const char buf[2]={*intextright, 0};
-						size_t ll=strlen(intextleft);
-						if(ll>INLINELEN)
-						{
-							size_t i;
-							for(i=1;i+20<ll;i++)
-								intextleft[i]=intextleft[i+20];
-							intextleft[i]=0;
-							ll=i;
-						}
-						intextleft[ll++]=*intextright;
-						intextleft[ll]=0;
-						if(*intextright=='\r')
+						const char buf[2]={inr[0], 0};
+						if(*buf=='\r')
 						{
 							transmit=false;
 							txbits=(bbuf){0, NULL};
 						}
 						else
 							txbits=encode(buf);
-						for(size_t i=0;intextright[i];i++)
-							intextright[i]=intextright[i+1];
+						append_char(&ing, &ingl, &ingi, *buf);
+						inri--;
+						for(size_t i=0;i<inri;i++)
+							inr[i]=inr[i+1];
 					}
 					if(txbits.nbits)
 					{
@@ -955,33 +1051,6 @@ void ztoxy(fftw_complex z, double gsf, int *x, int *y)
 {
 	if(x) *x=creal(z)*gsf+60;
 	if(y) *y=cimag(z)*gsf+60;
-}
-
-void addchar(char *intextleft, char *intextright, char what)
-{
-	size_t tp=strlen(intextright);
-	if(tp<INLINELEN)
-	{
-		intextright[tp++]=what;
-		intextright[tp]=0;
-		size_t ll=strlen(intextleft);
-		if(tp+ll>=INLINELEN)
-		{
-			size_t i;
-			for(i=1;i+20<ll;i++)
-				intextleft[i]=intextleft[i+20];
-			intextleft[i]=0;
-		}
-	}
-	else
-	{
-		fprintf(stderr, "Input overrun - discarded char %hhd\n", what);
-	}
-}
-
-void addstr(char *intextleft, char *intextright, const char *text)
-{
-	while(*text) addchar(intextleft, intextright, *text++);
 }
 
 /* Data for the selector */
