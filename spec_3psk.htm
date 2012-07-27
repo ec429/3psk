@@ -9,7 +9,7 @@
 <h1>3PSK Specification</h1>
 <h5>3PSK is a datamode for amateur radio, based on PSK</h5>
 <p>This is the specification of the 3PSK datamode.  For the user manual for the 3psk software, see the <a href="readme.htm">readme</a>.</p>
-<p>This is version 0.3, dated 26th July 2012.</p>
+<p>This is version 0.3, dated 27th July 2012.</p>
 </div><!--#title-->
 <div id="abstract">
 <h2>Abstract</h2>
@@ -54,7 +54,7 @@
 <ol type="I">
 <li>The radius |<em>z</em>| exceeds a set minimum (points on the constellation for which this is true are plotted in <span style="color:green;">green</span>, else <span style="color:red;">red</span>).</li>
 <li>The change in modulus arg(<em>z</em>) from the last accepted symbol is at least &pi;/2 radians (90&deg;).</li>
-<li>The rate of change |<em>dz</em>| is less than <em>k</em>&times;|<em>z</em>|, where <em>k</em> is a parameter inversely proportional to the <tt><strong>RXS</strong></tt> setting.</li>
+<li>The rate of change <big>|</big><sup><em>dz</em></sup><big>/</big><sub><em>dt</em></sub><big>|</big> is less than <em>rxs</em>&times;|<em>z</em>|, where <em>rxs</em> is an adjustable parameter.</li>
 </ol>
 <p>The direction of the transition is then ascertained by assuming it was less than &pi; radians (180&deg;).</p>
 </div><!--#implementation-->
