@@ -26,9 +26,11 @@
 #define PHASLEN	25
 
 #define INLINELEN	80
-#define INLINES		6
+#define INLINES		5
 #define OUTLINELEN	80
-#define OUTLINES	6
+#define OUTLINES	5
+#define MACROLEN	80
+#define NMACROS		6
 
 #define CONS_BG	(atg_colour){31, 31, 15, ATG_ALPHA_OPAQUE}
 #define PHAS_BG	(atg_colour){15, 31, 31, ATG_ALPHA_OPAQUE}
@@ -504,6 +506,84 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+	atg_colour *mcol[NMACROS];
+	char *macro[NMACROS];
+	atg_element *mline[NMACROS];
+	for(unsigned int i=0;i<NMACROS;i++)
+	{
+		mline[i]=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){23, 23, 23, ATG_ALPHA_OPAQUE});
+		if(!mline[i])
+		{
+			fprintf(stderr, "atg_create_element_box failed\n");
+			return(1);
+		}
+		mline[i]->w=canvas->surface->w;
+		mline[i]->clickable=true;
+		if(atg_pack_element(mainbox, mline[i]))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		else
+		{
+			atg_box *b=mline[i]->elem.box;
+			if(!b)
+			{
+				fprintf(stderr, "mline[%u]->elem.box==NULL\n", i);
+				return(1);
+			}
+			mcol[i]=&b->bgcolour;
+			atg_element *fn=atg_create_element_label("Fn: ", 8, (atg_colour){255, 255, 0, ATG_ALPHA_OPAQUE});
+			if(!fn)
+			{
+				fprintf(stderr, "atg_create_element_label failed\n");
+				return(1);
+			}
+			else
+			{
+				atg_label *l=fn->elem.label;
+				if(!l)
+				{
+					fprintf(stderr, "fn->elem.label==NULL\n");
+					return(1);
+				}
+				if(!l->text)
+				{
+					fprintf(stderr, "l->text==NULL\n");
+					return(1);
+				}
+				snprintf(l->text, 5, "F%01u: ", i+1);
+			}
+			if(atg_pack_element(b, fn))
+			{
+				perror("atg_pack_element");
+				return(1);
+			}
+			atg_element *text=atg_create_element_label(NULL, 8, (atg_colour){255, 255, 0, ATG_ALPHA_OPAQUE});
+			if(!text)
+			{
+				fprintf(stderr, "atg_create_element_label failed\n");
+				return(1);
+			}
+			if(!text->elem.label)
+			{
+				fprintf(stderr, "left->elem.label==NULL\n");
+				return(1);
+			}
+			if(!(macro[i]=text->elem.label->text=malloc(MACROLEN+1)))
+			{
+				perror("malloc");
+				return(1);
+			}
+			macro[i][0]=0;
+			if(atg_pack_element(b, text))
+			{
+				perror("atg_pack_element");
+				return(1);
+			}
+		}
+	}
+	unsigned int inp=NMACROS;
 	
 	fprintf(stderr, "Setting up decoder frontend\n");
 	wavhdr w;
@@ -742,6 +822,8 @@ int main(int argc, char **argv)
 						}
 					}
 				}
+				for(unsigned int i=0;i<NMACROS;i++)
+					*mcol[i]=(i==inp)?(atg_colour){63, 63, 47, ATG_ALPHA_OPAQUE}:(atg_colour){23, 23, 23, ATG_ALPHA_OPAQUE};
 				atg_flip(canvas);
 				atg_event e;
 				while(atg_poll_event(&e, canvas))
@@ -759,7 +841,47 @@ int main(int argc, char **argv)
 									switch(s.key.keysym.sym)
 									{
 										case SDLK_F1:
-											append_str(&inr, &inrl, &inri, "This is a test.  This is only a test.  Do not adjust your set.\n\r");
+											append_str(&inr, &inrl, &inri, macro[0]);
+											if(!transmit)
+											{
+												transmit=true;
+												txlead=max(txbaud/2, 8);
+											}
+										break;
+										case SDLK_F2:
+											append_str(&inr, &inrl, &inri, macro[1]);
+											if(!transmit)
+											{
+												transmit=true;
+												txlead=max(txbaud/2, 8);
+											}
+										break;
+										case SDLK_F3:
+											append_str(&inr, &inrl, &inri, macro[2]);
+											if(!transmit)
+											{
+												transmit=true;
+												txlead=max(txbaud/2, 8);
+											}
+										break;
+										case SDLK_F4:
+											append_str(&inr, &inrl, &inri, macro[3]);
+											if(!transmit)
+											{
+												transmit=true;
+												txlead=max(txbaud/2, 8);
+											}
+										break;
+										case SDLK_F5:
+											append_str(&inr, &inrl, &inri, macro[4]);
+											if(!transmit)
+											{
+												transmit=true;
+												txlead=max(txbaud/2, 8);
+											}
+										break;
+										case SDLK_F6:
+											append_str(&inr, &inrl, &inri, macro[5]);
 											if(!transmit)
 											{
 												transmit=true;
@@ -787,32 +909,82 @@ int main(int argc, char **argv)
 										break;
 										case SDLK_BACKSPACE:
 										{
-											if(inri) inr[--inri]=0;
+											if(inp>=NMACROS)
+											{
+												if(inri) inr[--inri]=0;
+											}
+											else
+											{
+												size_t l=strlen(macro[inp]);
+												if(l) macro[inp][l-1]=0;
+											}
 										}
 										break;
 										case SDLK_RETURN:
-											append_char(&inr, &inrl, &inri, '\n');
+											if(inp>=NMACROS)
+												append_char(&inr, &inrl, &inri, '\n');
+											else
+											{
+												size_t l=strlen(macro[inp]);
+												if(l<MACROLEN-1)
+												{
+													macro[inp][l++]='\n';
+													macro[inp][l]=0;
+												}
+											}
 										break;
 										case SDLK_KP_ENTER:
-											append_char(&inr, &inrl, &inri, '\r');
+											if(inp>=NMACROS)
+												append_char(&inr, &inrl, &inri, '\r');
+											else
+											{
+												size_t l=strlen(macro[inp]);
+												if(l<MACROLEN-1)
+												{
+													macro[inp][l++]='\r';
+													macro[inp][l]=0;
+												}
+											}
 										break;
 										default:
 											if((s.key.keysym.unicode&0xFF80)==0)
 											{
 												char what=s.key.keysym.unicode&0x7F;
 												if(what)
-													append_char(&inr, &inrl, &inri, what);
+												{
+													if(inp>=NMACROS)
+														append_char(&inr, &inrl, &inri, what);
+													else
+													{
+														size_t l=strlen(macro[inp]);
+														if(l<MACROLEN-1)
+														{
+															macro[inp][l++]=what;
+															macro[inp][l]=0;
+														}
+													}
+												}
 											}
 										break;
 									}
 								break;
 							}
 						break;
+						case ATG_EV_CLICK:;
+							atg_ev_click click=e.event.click;
+							if(!click.e)
+								fprintf(stderr, "click.e==NULL\n");
+							else
+							{
+								for(unsigned int i=0;i<NMACROS;i++)
+									if(click.e==mline[i]) inp=(inp==i)?NMACROS:i;
+							}
+						break;
 						case ATG_EV_TRIGGER:;
 							atg_ev_trigger trigger=e.event.trigger;
 							if(!trigger.e)
 							{
-								// internal error
+								fprintf(stderr, "trigger.e==NULL\n");
 							}
 							else
 								fprintf(stderr, "Clicked on unknown button!\n");
