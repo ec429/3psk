@@ -38,7 +38,7 @@ const char *set_tbl[6]={
 "BW min max",
 "10   1   7",
 "30   1  20",
-"150  4  75",
+"150  4  90",
 "750 40 400"};
 
 int pset(SDL_Surface *s, unsigned int x, unsigned int y, atg_colour c);
