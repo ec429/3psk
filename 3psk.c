@@ -13,8 +13,8 @@
 #include <complex.h>
 #include <fftw3.h>
 
-#include "atg/atg.h"
-#include "atg/atg_internals.h"
+#include <atg.h>
+#include <atg_internals.h>
 #include "wav.h"
 #include "bits.h"
 #include "varicode.h"
