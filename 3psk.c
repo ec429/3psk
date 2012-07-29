@@ -688,8 +688,9 @@ int main(int argc, char **argv)
 				enough=(fabs(da=carg(fftout[k]/lastsym))>(fch?M_PI*2/3.0:M_PI/2));
 			else
 				enough=true;
-			fftw_complex dz=fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN];
-			if((lined[frame%CONSDLEN]=(green&&enough&&(fch||(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)slow-32)/4.0)*2e4))))))
+			fftw_complex dz=bwsel?fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN]:fftout[k]/points[(frame+CONSDLEN-1)%CONSDLEN];
+			bool spd=bwsel?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)slow-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)slow-32)/4.0)*2e2));
+			if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
 			{
 				line(g_constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
 				line(g_phasing_img, 0, 60, g_phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
