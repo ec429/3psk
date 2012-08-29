@@ -34,6 +34,7 @@
 
 #define CONS_BG	(atg_colour){31, 31, 15, ATG_ALPHA_OPAQUE}
 #define PHAS_BG	(atg_colour){15, 31, 31, ATG_ALPHA_OPAQUE}
+#define SPEC_BG	(atg_colour){ 7,  7, 23, ATG_ALPHA_OPAQUE}
 
 const char *set_tbl[6]={
 "Baud Rates",
@@ -138,7 +139,7 @@ int main(int argc, char **argv)
 	char *g_bauds=NULL;
 	bool *g_tx=NULL;
 	unsigned int bwsel=2;
-	atg_element *g_bw=NULL, *g_spl=NULL, *g_rxf=NULL;
+	atg_element *g_bw=NULL, *g_spl=NULL, *g_txf=NULL, *g_rxf=NULL;
 	SDL_Surface *g_constel_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 120, 120, canvas->surface->format->BitsPerPixel, canvas->surface->format->Rmask, canvas->surface->format->Gmask, canvas->surface->format->Bmask, canvas->surface->format->Amask);
 	if(!g_constel_img)
 	{
@@ -151,10 +152,17 @@ int main(int argc, char **argv)
 		fprintf(stderr, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
 		return(1);
 	}
+	SDL_Surface *g_spectro_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 160, 60, canvas->surface->format->BitsPerPixel, canvas->surface->format->Rmask, canvas->surface->format->Gmask, canvas->surface->format->Bmask, canvas->surface->format->Amask);
+	if(!g_spectro_img)
+	{
+		fprintf(stderr, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
+		return(1);
+	}
 	else
 	{
 		SDL_FillRect(g_constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(g_constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
-		SDL_FillRect(g_phasing_img, &(SDL_Rect){0, 0, 100, 120}, SDL_MapRGB(g_constel_img->format, PHAS_BG.r, PHAS_BG.g, PHAS_BG.b));
+		SDL_FillRect(g_phasing_img, &(SDL_Rect){0, 0, 100, 120}, SDL_MapRGB(g_phasing_img->format, PHAS_BG.r, PHAS_BG.g, PHAS_BG.b));
+		SDL_FillRect(g_spectro_img, &(SDL_Rect){0, 0, 160,  60}, SDL_MapRGB(g_spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
 		atg_box *g_db=g_decoder->elem.box;
 		if(!g_db)
 		{
@@ -295,7 +303,7 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, txcentre, "TXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		g_txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, txcentre, "TXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_txf)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -365,7 +373,31 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		// TODO make spectrogram, other decoder bits?
+		atg_element *g_rbox=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!g_rbox)
+		{
+			fprintf(stderr, "atg_create_element_box failed\n");
+			return(1);
+		}
+		if(atg_pack_element(g_db, g_rbox))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		b=g_rbox->elem.box;
+		atg_element *g_spectro=atg_create_element_image(g_spectro_img);
+		if(!g_spectro)
+		{
+			fprintf(stderr, "atg_create_element_image failed\n");
+			return(1);
+		}
+		g_spectro->clickable=true;
+		g_spectro->userdata="SPEC";
+		if(atg_pack_element(b, g_spectro))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
 		atg_element *g_set_tbl=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
 		if(!g_set_tbl)
 		{
@@ -373,7 +405,7 @@ int main(int argc, char **argv)
 			return(1);
 		}
 		g_set_tbl->cache=true;
-		if(atg_pack_element(g_db, g_set_tbl))
+		if(atg_pack_element(b, g_set_tbl))
 		{
 			perror("atg_pack_element");
 			return(1);
@@ -614,13 +646,18 @@ int main(int argc, char **argv)
 	fprintf(stderr, "frontend: Actual IF: %g Hz\n", truif);
 	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/10.0));
 	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/10.0));
+	unsigned long speclen=max(floor(w.sample_rate/5.0), 360), spechalf=(speclen>>1)+1;
+	double spec_hpp=w.sample_rate/(double)speclen;
+	double *specin=fftw_malloc(sizeof(double)*speclen);
+	fftw_complex *specout=fftw_malloc(sizeof(fftw_complex)*spechalf);
 	fftw_set_timelimit(2.0);
 	fprintf(stderr, "frontend: Preparing FFT plans\n");
-	fftw_plan p[4];
+	fftw_plan p[4], sp_p;
 	p[0]=fftw_plan_dft_1d(floor(w.sample_rate/10.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	p[1]=fftw_plan_dft_1d(floor(w.sample_rate/30.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	p[2]=fftw_plan_dft_1d(floor(w.sample_rate/150.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	p[3]=fftw_plan_dft_1d(floor(w.sample_rate/750.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	sp_p=fftw_plan_dft_r2c_1d(speclen, specin, specout, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	fprintf(stderr, "frontend: Ready\n");
 	long wzero=zeroval(w);
 	
@@ -651,6 +688,12 @@ int main(int argc, char **argv)
 	for(size_t i=0;i<PHASLEN;i++)
 		symtime[i]=0;
 	bool st_loop=false;
+	
+	unsigned int spec_pt[8][160];
+	for(unsigned int i=0;i<8;i++)
+		for(unsigned int j=0;j<160;j++)
+			spec_pt[i][j]=60;
+	unsigned int spec_which=0;
 	
 	bool transmit=false;
 	double txphi=0;
@@ -975,6 +1018,34 @@ int main(int argc, char **argv)
 							atg_ev_click click=e.event.click;
 							if(!click.e)
 								fprintf(stderr, "click.e==NULL\n");
+							else if(click.e->userdata)
+							{
+								if(strcmp(click.e->userdata, "SPEC")==0)
+								{
+									switch(click.button)
+									{
+										case ATG_MB_LEFT:
+											txcentre=(click.pos.x+20)*spec_hpp;
+											if(g_txf&&(g_txf->type==ATG_SPINNER))
+											{
+												atg_spinner *s=g_txf->elem.spinner;
+												if(s) s->value=floor(txcentre+.5);
+											}
+											/* fallthrough */
+										case ATG_MB_RIGHT:
+											centre=(click.pos.x+20)*spec_hpp;
+											if(g_rxf&&(g_rxf->type==ATG_SPINNER))
+											{
+												atg_spinner *s=g_rxf->elem.spinner;
+												if(s) s->value=floor(centre+.5);
+											}
+										break;
+										default:
+											// ignore
+										break;
+									}
+								}
+							}
 							else
 							{
 								for(unsigned int i=0;i<NMACROS;i++)
@@ -1168,6 +1239,29 @@ int main(int argc, char **argv)
 		double sv=si/(double)(1<<w.bits_per_sample);
 		double phi=t*2*M_PI*(truif-centre)/w.sample_rate;
 		fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*am;
+		if(!(t%speclen))
+		{
+			fftw_execute(sp_p);
+			SDL_FillRect(g_spectro_img, &(SDL_Rect){0, 0, 160, 60}, SDL_MapRGB(g_spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
+			for(unsigned int h=1;h<9;h++)
+			{
+				unsigned int x=floor(h*100/spec_hpp)-20;
+				line(g_spectro_img, x, 0, x, 59, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
+			}
+			unsigned int rx=floor(centre/spec_hpp)-20;
+			line(g_spectro_img, rx, 0, rx, 59, (atg_colour){0, 47, 0, ATG_ALPHA_OPAQUE});
+			unsigned int tx=floor(txcentre/spec_hpp)-20;
+			line(g_spectro_img, tx, 0, tx, 59, (atg_colour){63, 0, 0, ATG_ALPHA_OPAQUE});
+			for(unsigned int j=0;j<160;j++)
+			{
+				for(unsigned int k=1;k<8;k++)
+					pset(g_spectro_img, j, spec_pt[(spec_which+k)%8][j], (atg_colour){k*20, k*20, 0, ATG_ALPHA_OPAQUE});
+				double mag=4*sqrt(cabs(specout[j+20]));
+				pset(g_spectro_img, j, spec_pt[spec_which][j]=max(59-mag, 0), (atg_colour){255, 255, 0, ATG_ALPHA_OPAQUE});
+			}
+			spec_which=(spec_which+1)%8;
+		}
+		specin[t%speclen]=sv;
 	}
 	fprintf(stderr, "\n");
 	return(0);
