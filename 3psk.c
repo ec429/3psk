@@ -889,7 +889,7 @@ int main(int argc, char **argv)
 											if(!transmit)
 											{
 												transmit=true;
-												txlead=max(txbaud/2, 8);
+												txlead=max(txbaud, 8);
 											}
 										break;
 										case SDLK_F2:
@@ -897,7 +897,7 @@ int main(int argc, char **argv)
 											if(!transmit)
 											{
 												transmit=true;
-												txlead=max(txbaud/2, 8);
+												txlead=max(txbaud, 8);
 											}
 										break;
 										case SDLK_F3:
@@ -905,7 +905,7 @@ int main(int argc, char **argv)
 											if(!transmit)
 											{
 												transmit=true;
-												txlead=max(txbaud/2, 8);
+												txlead=max(txbaud, 8);
 											}
 										break;
 										case SDLK_F4:
@@ -913,7 +913,7 @@ int main(int argc, char **argv)
 											if(!transmit)
 											{
 												transmit=true;
-												txlead=max(txbaud/2, 8);
+												txlead=max(txbaud, 8);
 											}
 										break;
 										case SDLK_F5:
@@ -921,7 +921,7 @@ int main(int argc, char **argv)
 											if(!transmit)
 											{
 												transmit=true;
-												txlead=max(txbaud/2, 8);
+												txlead=max(txbaud, 8);
 											}
 										break;
 										case SDLK_F6:
@@ -929,18 +929,20 @@ int main(int argc, char **argv)
 											if(!transmit)
 											{
 												transmit=true;
-												txlead=max(txbaud/2, 8);
+												txlead=max(txbaud, 8);
 											}
 										break;
 										case SDLK_F7:
 											transmit=true;
-											txlead=max(txbaud/2, 8);
+											txlead=max(txbaud, 8);
 										break;
 										case SDLK_F8:
 											transmit=false;
+											txlead=max(txbaud/2, 8);
 										break;
 										case SDLK_ESCAPE:
 											transmit=false;
+											txlead=0;
 											inri=0;
 										break;
 										case SDLK_F9:
@@ -1136,6 +1138,7 @@ int main(int argc, char **argv)
 									if(strcmp((const char *)toggle.e->userdata, "TX")==0)
 									{
 										transmit=toggle.state;
+										txlead=max(txbaud/(transmit?1:2), 8);
 									}
 									else if(strcmp((const char *)toggle.e->userdata, "MONI")==0)
 									{
@@ -1169,7 +1172,7 @@ int main(int argc, char **argv)
 			}
 		}
 		long si=read_sample(w, stdin)-wzero;
-		if(transmit)
+		if(transmit||txlead)
 		{
 			if(((t*txbaud)%w.sample_rate)<txbaud)
 			{
@@ -1188,6 +1191,7 @@ int main(int argc, char **argv)
 						if(*buf=='\r')
 						{
 							transmit=false;
+							txlead=max(txbaud/2, 8);
 							txbits=(bbuf){0, NULL};
 						}
 						else
