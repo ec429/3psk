@@ -1034,7 +1034,7 @@ int main(int argc, char **argv)
 									switch(click.button)
 									{
 										case ATG_MB_LEFT:
-											txf=(click.pos.x+20)*spec_hpp;
+											txf=min(max((click.pos.x+20)*spec_hpp, 200), 800);
 											if(g_txf&&(g_txf->type==ATG_SPINNER))
 											{
 												atg_spinner *s=g_txf->elem.spinner;
@@ -1042,7 +1042,7 @@ int main(int argc, char **argv)
 											}
 											/* fallthrough */
 										case ATG_MB_RIGHT:
-											rxf=(click.pos.x+20)*spec_hpp;
+											rxf=min(max((click.pos.x+20)*spec_hpp, 200), 800);
 											if(g_rxf&&(g_rxf->type==ATG_SPINNER))
 											{
 												atg_spinner *s=g_rxf->elem.spinner;
