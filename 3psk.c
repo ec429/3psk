@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 	double centre=440; // centre frequency, Hz
 	double aif=3000; // approximate IF, Hz
 	unsigned int slow=28;
-	double am=2.0;
+	unsigned int am=10;
 	bool moni=true, afc=false;
 	unsigned int txbaud=60;
 	for(int arg=1;arg<argc;arg++)
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 		}
 		else if(strncmp(argv[arg], "--am=", 5)==0)
 		{
-			sscanf(argv[arg]+5, "%lg", &am);
+			sscanf(argv[arg]+5, "%u", &am);
 		}
 		else if(strncmp(argv[arg], "--txb=", 6)==0)
 		{
@@ -339,7 +339,7 @@ int main(int argc, char **argv)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, floor(am*5+.5), "AMP %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		atg_element *g_amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, am, "AMP %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!g_amp)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -1122,7 +1122,7 @@ int main(int argc, char **argv)
 									}
 									else if(strcmp((const char *)value.e->userdata, "AMP")==0)
 									{
-										am=value.value/5.0;
+										am=value.value;
 									}
 									else
 										fprintf(stderr, "Changed an unknown spinner!\n");
@@ -1242,7 +1242,7 @@ int main(int argc, char **argv)
 		if(wzero) si<<=1;
 		double sv=si/(double)(1<<w.bits_per_sample);
 		double phi=t*2*M_PI*(truif-centre)/w.sample_rate;
-		fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*am;
+		fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*am/5.0;
 		if(!(t%speclen))
 		{
 			fftw_execute(sp_p);
