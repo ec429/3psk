@@ -12,10 +12,10 @@ typedef struct
 {
 	atg_canvas *canvas;
 	SDL_Surface *g_constel_img, *g_phasing_img, *g_spectro_img;
-	char *g_bauds;
 	bool *g_tx, *g_moni, *g_afc, *g_spl;
 	unsigned int *bwsel;
-	atg_element *g_bw, *g_txf, *g_rxf;
+	atg_element *g_bw, *g_txb, *g_txf, *g_rxf, *g_rxs, *g_amp;
+	char *g_bauds;
 	char *intextleft[INLINES], *intextright[INLINES];
 	char *inr, *ing; size_t inrl, inri, ingl, ingi;
 	char *outtext[OUTLINES];
@@ -32,6 +32,7 @@ gui;
 extern const char *set_tbl[6];
 
 int make_gui(gui *buf, unsigned int *bws);
+int setspinval(atg_element *spinner, int value);
 
 int pset(SDL_Surface *s, unsigned int x, unsigned int y, atg_colour c);
 int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, atg_colour c);

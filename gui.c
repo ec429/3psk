@@ -228,14 +228,14 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_txb=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 600, 1, 0, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
-		if(!g_txb)
+		buf->g_txb=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 600, 1, 0, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!buf->g_txb)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		g_txb->userdata="TXB";
-		if(atg_pack_element(b, g_txb))
+		buf->g_txb->userdata="TXB";
+		if(atg_pack_element(b, buf->g_txb))
 		{
 			perror("atg_pack_element");
 			return(1);
@@ -264,26 +264,26 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_rxs=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 1, 64, 1, 0, "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
-		if(!g_rxs)
+		buf->g_rxs=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 1, 64, 1, 0, "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!buf->g_rxs)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		g_rxs->userdata="RXS";
-		if(atg_pack_element(b, g_rxs))
+		buf->g_rxs->userdata="RXS";
+		if(atg_pack_element(b, buf->g_rxs))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, 0, "AMP %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
-		if(!g_amp)
+		buf->g_amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, 0, "AMP %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!buf->g_amp)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		g_amp->userdata="AMP";
-		if(atg_pack_element(b, g_amp))
+		buf->g_amp->userdata="AMP";
+		if(atg_pack_element(b, buf->g_amp))
 		{
 			perror("atg_pack_element");
 			return(1);
@@ -546,6 +546,19 @@ int make_gui(gui *buf, unsigned int *bws)
 			}
 		}
 	}
+	return(0);
+}
+
+int setspinval(atg_element *spinner, int value)
+{
+	if(!spinner) return(1);
+	atg_spinner *s=spinner->elem.spinner;
+	if(!s)
+	{
+		fprintf(stderr, "spinner->elem.spinner==NULL\n");
+		return(1);
+	}
+	s->value=value;
 	return(0);
 }
 

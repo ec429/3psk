@@ -25,6 +25,8 @@
 #define BITBUFLEN	16
 #define PHASLEN	25
 
+#define txstart(lead)	if(G.g_tx&&!*G.g_tx) { *G.g_tx=true; txlead=max(txb, (lead)); }
+
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
 
 int main(int argc, char **argv)
@@ -98,9 +100,54 @@ int main(int argc, char **argv)
 			return(e);
 		}
 		if(G.g_tx) *G.g_tx=false; else {fprintf(stderr, "Error: G.g_tx is NULL\n"); return(1);}
-		if(G.g_moni) *G.g_tx=init_moni; else {fprintf(stderr, "Error: G.g_moni is NULL\n"); return(1);}
-		if(G.g_afc) *G.g_tx=init_afc; else {fprintf(stderr, "Error: G.g_afc is NULL\n"); return(1);}
-		if(G.g_spl) *G.g_tx=!setrxf; else {fprintf(stderr, "Error: G.g_spl is NULL\n"); return(1);}
+		if(G.g_moni) *G.g_moni=init_moni; else {fprintf(stderr, "Error: G.g_moni is NULL\n"); return(1);}
+		if(G.g_afc) *G.g_afc=init_afc; else {fprintf(stderr, "Error: G.g_afc is NULL\n"); return(1);}
+		if(G.g_spl) *G.g_spl=!setrxf; else {fprintf(stderr, "Error: G.g_spl is NULL\n"); return(1);}
+		if(G.g_txb)
+		{
+			if((e=setspinval(G.g_txb, txb)))
+			{
+				fprintf(stderr, "Failed to set TXB spinner\n");
+				return(1);
+			}
+		}
+		else {fprintf(stderr, "Error: G.g_txb is NULL\n"); return(1);}
+		if(G.g_txf)
+		{
+			if((e=setspinval(G.g_txf, txf)))
+			{
+				fprintf(stderr, "Failed to set TXF spinner\n");
+				return(1);
+			}
+		}
+		else {fprintf(stderr, "Error: G.g_txf is NULL\n"); return(1);}
+		if(G.g_rxf)
+		{
+			if((e=setspinval(G.g_rxf, rxf)))
+			{
+				fprintf(stderr, "Failed to set RXF spinner\n");
+				return(1);
+			}
+		}
+		else {fprintf(stderr, "Error: G.g_rxf is NULL\n"); return(1);}
+		if(G.g_rxs)
+		{
+			if((e=setspinval(G.g_rxs, rxs)))
+			{
+				fprintf(stderr, "Failed to set RXS spinner\n");
+				return(1);
+			}
+		}
+		else {fprintf(stderr, "Error: G.g_rxs is NULL\n"); return(1);}
+		if(G.g_amp)
+		{
+			if((e=setspinval(G.g_amp, amp)))
+			{
+				fprintf(stderr, "Failed to set AMP spinner\n");
+				return(1);
+			}
+		}
+		else {fprintf(stderr, "Error: G.g_amp is NULL\n"); return(1);}
 	}
 	
 	unsigned int inp=NMACROS;
@@ -183,7 +230,6 @@ int main(int argc, char **argv)
 			spec_pt[i][j]=60;
 	unsigned int spec_which=0;
 	
-	bool transmit=false;
 	double txphi=0;
 	bbuf txbits={0, NULL};
 	unsigned int txsetp=0;
@@ -301,7 +347,6 @@ int main(int argc, char **argv)
 			if(t>(lastflip+w.sample_rate/8))
 			{
 				lastflip+=w.sample_rate/8;
-				if(G.g_tx) *G.g_tx=transmit;
 				if(G.g_spl) *G.g_spl=(rxf!=txf);
 				if(true)
 				{
@@ -373,55 +418,30 @@ int main(int argc, char **argv)
 									{
 										case SDLK_F1:
 											append_str(&G.inr, &G.inrl, &G.inri, G.macro[0]);
-											if(!transmit)
-											{
-												transmit=true;
-												txlead=max(txb, 8);
-											}
+											txstart(8);
 										break;
 										case SDLK_F2:
 											append_str(&G.inr, &G.inrl, &G.inri, G.macro[1]);
-											if(!transmit)
-											{
-												transmit=true;
-												txlead=max(txb, 8);
-											}
+											txstart(8);
 										break;
 										case SDLK_F3:
 											append_str(&G.inr, &G.inrl, &G.inri, G.macro[2]);
-											if(!transmit)
-											{
-												transmit=true;
-												txlead=max(txb, 8);
-											}
+											txstart(8);
 										break;
 										case SDLK_F4:
 											append_str(&G.inr, &G.inrl, &G.inri, G.macro[3]);
-											if(!transmit)
-											{
-												transmit=true;
-												txlead=max(txb, 8);
-											}
+											txstart(8);
 										break;
 										case SDLK_F5:
 											append_str(&G.inr, &G.inrl, &G.inri, G.macro[4]);
-											if(!transmit)
-											{
-												transmit=true;
-												txlead=max(txb, 8);
-											}
+											txstart(8);
 										break;
 										case SDLK_F6:
 											append_str(&G.inr, &G.inrl, &G.inri, G.macro[5]);
-											if(!transmit)
-											{
-												transmit=true;
-												txlead=max(txb, 8);
-											}
+											txstart(8);
 										break;
 										case SDLK_F7:
-											if(G.g_tx) *G.g_tx=true;
-											txlead=max(txb, 8);
+											txstart(8);
 										break;
 										case SDLK_F8:
 											if(G.g_tx) *G.g_tx=false;
@@ -623,7 +643,7 @@ int main(int argc, char **argv)
 								if(toggle.e->userdata)
 								{
 									if(strcmp((const char *)toggle.e->userdata, "TX")==0)
-										txlead=max(txb/(transmit?1:2), 8);
+										txlead=max(txb/((G.g_tx&&*G.g_tx)?1:2), 8);
 									else if(strcmp((const char *)toggle.e->userdata, "MONI")==0)
 									{
 									}
@@ -672,7 +692,7 @@ int main(int argc, char **argv)
 						const char buf[2]={G.inr[0], 0};
 						if(*buf=='\r')
 						{
-							transmit=false;
+							*G.g_tx=false;
 							txlead=max(txb/2, 8);
 							txbits=(bbuf){0, NULL};
 						}
