@@ -2,7 +2,7 @@
 #include <atg_internals.h>
 #include "strbuf.h"
 
-const char *set_tbl[6]={
+const char *set_tbl_strings[6]={
 "Baud Rates",
 "BW min max",
 "10   1   7",
@@ -23,339 +23,339 @@ int make_gui(gui *buf, unsigned int *bws)
 	SDL_EnableUNICODE(1);
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 	atg_box *mainbox=buf->canvas->box;
-	atg_element *g_title=atg_create_element_label("3psk by Edward Cree M0TBK", 12, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
-	if(!g_title)
+	atg_element *title=atg_create_element_label("3psk by Edward Cree M0TBK", 12, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+	if(!title)
 	{
 		fprintf(stderr, "atg_create_element_label failed\n");
 		return(1);
 	}
-	g_title->cache=true;
-	if(atg_pack_element(mainbox, g_title))
+	title->cache=true;
+	if(atg_pack_element(mainbox, title))
 	{
 		perror("atg_pack_element");
 		return(1);
 	}
-	atg_element *g_decoder=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
-	if(!g_decoder)
+	atg_element *decoder=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+	if(!decoder)
 	{
 		fprintf(stderr, "atg_create_element_box failed\n");
 		return(1);
 	}
-	if(atg_pack_element(mainbox, g_decoder))
+	if(atg_pack_element(mainbox, decoder))
 	{
 		perror("atg_pack_element");
 		return(1);
 	}
-	buf->g_bauds=NULL;
-	buf->g_tx=NULL;
-	buf->g_moni=NULL;
-	buf->g_afc=NULL;
-	buf->g_spl=NULL;
+	buf->bauds=NULL;
+	buf->tx=NULL;
+	buf->moni=NULL;
+	buf->afc=NULL;
+	buf->spl=NULL;
 	buf->bwsel=bws;
-	buf->g_bw=NULL;
-	buf->g_spl=NULL;
-	buf->g_txf=NULL;
-	buf->g_rxf=NULL;
-	buf->g_constel_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 120, 120, buf->canvas->surface->format->BitsPerPixel, buf->canvas->surface->format->Rmask, buf->canvas->surface->format->Gmask, buf->canvas->surface->format->Bmask, buf->canvas->surface->format->Amask);
-	if(!buf->g_constel_img)
+	buf->bw=NULL;
+	buf->spl=NULL;
+	buf->txf=NULL;
+	buf->rxf=NULL;
+	buf->constel_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 120, 120, buf->canvas->surface->format->BitsPerPixel, buf->canvas->surface->format->Rmask, buf->canvas->surface->format->Gmask, buf->canvas->surface->format->Bmask, buf->canvas->surface->format->Amask);
+	if(!buf->constel_img)
 	{
 		fprintf(stderr, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
 		return(1);
 	}
-	buf->g_phasing_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 100, 120, buf->canvas->surface->format->BitsPerPixel, buf->canvas->surface->format->Rmask, buf->canvas->surface->format->Gmask, buf->canvas->surface->format->Bmask, buf->canvas->surface->format->Amask);
-	if(!buf->g_phasing_img)
+	buf->phasing_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 100, 120, buf->canvas->surface->format->BitsPerPixel, buf->canvas->surface->format->Rmask, buf->canvas->surface->format->Gmask, buf->canvas->surface->format->Bmask, buf->canvas->surface->format->Amask);
+	if(!buf->phasing_img)
 	{
 		fprintf(stderr, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
 		return(1);
 	}
-	buf->g_spectro_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 160, 60, buf->canvas->surface->format->BitsPerPixel, buf->canvas->surface->format->Rmask, buf->canvas->surface->format->Gmask, buf->canvas->surface->format->Bmask, buf->canvas->surface->format->Amask);
-	if(!buf->g_spectro_img)
+	buf->spectro_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 160, 60, buf->canvas->surface->format->BitsPerPixel, buf->canvas->surface->format->Rmask, buf->canvas->surface->format->Gmask, buf->canvas->surface->format->Bmask, buf->canvas->surface->format->Amask);
+	if(!buf->spectro_img)
 	{
 		fprintf(stderr, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
 		return(1);
 	}
 	else
 	{
-		SDL_FillRect(buf->g_constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(buf->g_constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
-		SDL_FillRect(buf->g_phasing_img, &(SDL_Rect){0, 0, 100, 120}, SDL_MapRGB(buf->g_phasing_img->format, PHAS_BG.r, PHAS_BG.g, PHAS_BG.b));
-		SDL_FillRect(buf->g_spectro_img, &(SDL_Rect){0, 0, 160,  60}, SDL_MapRGB(buf->g_spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
-		atg_box *g_db=g_decoder->elem.box;
-		if(!g_db)
+		SDL_FillRect(buf->constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(buf->constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
+		SDL_FillRect(buf->phasing_img, &(SDL_Rect){0, 0, 100, 120}, SDL_MapRGB(buf->phasing_img->format, PHAS_BG.r, PHAS_BG.g, PHAS_BG.b));
+		SDL_FillRect(buf->spectro_img, &(SDL_Rect){0, 0, 160,  60}, SDL_MapRGB(buf->spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
+		atg_box *db=decoder->elem.box;
+		if(!db)
 		{
-			fprintf(stderr, "g_decoder->elem.box==NULL\n");
+			fprintf(stderr, "decoder->elem.box==NULL\n");
 			return(1);
 		}
-		atg_element *g_constel=atg_create_element_image(buf->g_constel_img);
-		if(!g_constel)
-		{
-			fprintf(stderr, "atg_create_element_image failed\n");
-			return(1);
-		}
-		if(atg_pack_element(g_db, g_constel))
-		{
-			perror("atg_pack_element");
-			return(1);
-		}
-		atg_element *g_phasing=atg_create_element_image(buf->g_phasing_img);
-		if(!g_phasing)
+		atg_element *constel=atg_create_element_image(buf->constel_img);
+		if(!constel)
 		{
 			fprintf(stderr, "atg_create_element_image failed\n");
 			return(1);
 		}
-		if(atg_pack_element(g_db, g_phasing))
+		if(atg_pack_element(db, constel))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_controls=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){23, 23, 23, ATG_ALPHA_OPAQUE});
-		if(!g_controls)
+		atg_element *phasing=atg_create_element_image(buf->phasing_img);
+		if(!phasing)
+		{
+			fprintf(stderr, "atg_create_element_image failed\n");
+			return(1);
+		}
+		if(atg_pack_element(db, phasing))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *controls=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){23, 23, 23, ATG_ALPHA_OPAQUE});
+		if(!controls)
 		{
 			fprintf(stderr, "atg_create_element_box failed\n");
 			return(1);
 		}
-		if(atg_pack_element(g_db, g_controls))
+		if(atg_pack_element(db, controls))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_box *b=g_controls->elem.box;
+		atg_box *b=controls->elem.box;
 		if(!b)
 		{
-			fprintf(stderr, "g_controls->elem.box==NULL\n");
+			fprintf(stderr, "controls->elem.box==NULL\n");
 			return(1);
 		}
-		atg_element *g_btns1=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){31, 23, 23, ATG_ALPHA_OPAQUE});
-		if(!g_btns1)
+		atg_element *btns1=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){31, 23, 23, ATG_ALPHA_OPAQUE});
+		if(!btns1)
 		{
 			fprintf(stderr, "atg_create_element_box failed\n");
 			return(1);
 		}
-		if(atg_pack_element(b, g_btns1))
+		if(atg_pack_element(b, btns1))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_box *bb1=g_btns1->elem.box;
+		atg_box *bb1=btns1->elem.box;
 		if(!bb1)
 		{
-			fprintf(stderr, "g_btns1->elem.box==NULL\n");
+			fprintf(stderr, "btns1->elem.box==NULL\n");
 			return(1);
 		}
-		atg_element *g_tx=atg_create_element_toggle("TX", false, (atg_colour){191, 0, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
-		if(!g_tx)
+		atg_element *tx=atg_create_element_toggle("TX", false, (atg_colour){191, 0, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!tx)
 		{
 			fprintf(stderr, "atg_create_element_toggle failed\n");
 			return(1);
 		}
-		atg_toggle *t=g_tx->elem.toggle;
+		atg_toggle *t=tx->elem.toggle;
 		if(!t)
 		{
-			fprintf(stderr, "g_tx->elem.toggle==NULL\n");
+			fprintf(stderr, "tx->elem.toggle==NULL\n");
 			return(1);
 		}
-		buf->g_tx=&t->state;
-		g_tx->userdata="TX";
-		if(atg_pack_element(bb1, g_tx))
+		buf->tx=&t->state;
+		tx->userdata="TX";
+		if(atg_pack_element(bb1, tx))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_moni=atg_create_element_toggle("MONI", false, (atg_colour){0, 191, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
-		if(!g_moni)
+		atg_element *moni=atg_create_element_toggle("MONI", false, (atg_colour){0, 191, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!moni)
 		{
 			fprintf(stderr, "atg_create_element_toggle failed\n");
 			return(1);
 		}
-		t=g_moni->elem.toggle;
+		t=moni->elem.toggle;
 		if(!t)
 		{
-			fprintf(stderr, "g_moni->elem.toggle==NULL\n");
+			fprintf(stderr, "moni->elem.toggle==NULL\n");
 			return(1);
 		}
-		buf->g_moni=&t->state;
-		g_moni->userdata="MONI";
-		if(atg_pack_element(bb1, g_moni))
+		buf->moni=&t->state;
+		moni->userdata="MONI";
+		if(atg_pack_element(bb1, moni))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_afc=atg_create_element_toggle("AFC", false, (atg_colour){191, 127, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
-		if(!g_afc)
+		atg_element *afc=atg_create_element_toggle("AFC", false, (atg_colour){191, 127, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!afc)
 		{
 			fprintf(stderr, "atg_create_element_toggle failed\n");
 			return(1);
 		}
-		t=g_afc->elem.toggle;
+		t=afc->elem.toggle;
 		if(!t)
 		{
-			fprintf(stderr, "g_afc->elem.toggle==NULL\n");
+			fprintf(stderr, "afc->elem.toggle==NULL\n");
 			return(1);
 		}
-		buf->g_afc=&t->state;
-		g_afc->userdata="AFC";
-		if(atg_pack_element(bb1, g_afc))
+		buf->afc=&t->state;
+		afc->userdata="AFC";
+		if(atg_pack_element(bb1, afc))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_spl=atg_create_element_toggle("SPL", false, (atg_colour){191, 191, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
-		if(!g_spl)
+		atg_element *spl=atg_create_element_toggle("SPL", false, (atg_colour){191, 191, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!spl)
 		{
 			fprintf(stderr, "atg_create_element_toggle failed\n");
 			return(1);
 		}
-		t=g_spl->elem.toggle;
+		t=spl->elem.toggle;
 		if(!t)
 		{
-			fprintf(stderr, "g_moni->elem.toggle==NULL\n");
+			fprintf(stderr, "spl->elem.toggle==NULL\n");
 			return(1);
 		}
-		buf->g_spl=&t->state;
-		g_spl->userdata="SPL";
-		if(atg_pack_element(bb1, g_spl))
+		buf->spl=&t->state;
+		spl->userdata="SPL";
+		if(atg_pack_element(bb1, spl))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->g_bw=create_selector(bws);
-		if(!buf->g_bw)
+		buf->bw=create_selector(bws);
+		if(!buf->bw)
 		{
 			fprintf(stderr, "create_selector failed\n");
 			return(1);
 		}
-		if(atg_pack_element(b, buf->g_bw))
+		if(atg_pack_element(b, buf->bw))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->g_txb=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 600, 1, 0, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
-		if(!buf->g_txb)
+		buf->txb=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 600, 1, 0, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!buf->txb)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		buf->g_txb->userdata="TXB";
-		if(atg_pack_element(b, buf->g_txb))
+		buf->txb->userdata="TXB";
+		if(atg_pack_element(b, buf->txb))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->g_txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, 0, "TXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
-		if(!buf->g_txf)
+		buf->txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, 0, "TXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!buf->txf)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		buf->g_txf->userdata="TXF";
-		if(atg_pack_element(b, buf->g_txf))
+		buf->txf->userdata="TXF";
+		if(atg_pack_element(b, buf->txf))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->g_rxf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, 0, "RXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
-		if(!buf->g_rxf)
+		buf->rxf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, 0, "RXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!buf->rxf)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		buf->g_rxf->userdata="RXF";
-		if(atg_pack_element(b, buf->g_rxf))
+		buf->rxf->userdata="RXF";
+		if(atg_pack_element(b, buf->rxf))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->g_rxs=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 1, 64, 1, 0, "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
-		if(!buf->g_rxs)
+		buf->rxs=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 1, 64, 1, 0, "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!buf->rxs)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		buf->g_rxs->userdata="RXS";
-		if(atg_pack_element(b, buf->g_rxs))
+		buf->rxs->userdata="RXS";
+		if(atg_pack_element(b, buf->rxs))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->g_amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, 0, "AMP %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
-		if(!buf->g_amp)
+		buf->amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, 0, "AMP %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		if(!buf->amp)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
 			return(1);
 		}
-		buf->g_amp->userdata="AMP";
-		if(atg_pack_element(b, buf->g_amp))
+		buf->amp->userdata="AMP";
+		if(atg_pack_element(b, buf->amp))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_baud_label=atg_create_element_label("RXB 000", 15, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
-		if(!g_baud_label)
+		atg_element *baud_label=atg_create_element_label("RXB 000", 15, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+		if(!baud_label)
 		{
 			fprintf(stderr, "atg_create_element_label failed\n");
 			return(1);
 		}
-		if(!g_baud_label->elem.label)
+		if(!baud_label->elem.label)
 		{
-			fprintf(stderr, "g_baud_label->elem.label==NULL\n");
+			fprintf(stderr, "baud_label->elem.label==NULL\n");
 			return(1);
 		}
-		buf->g_bauds=g_baud_label->elem.label->text;
-		if(!buf->g_bauds)
+		buf->bauds=baud_label->elem.label->text;
+		if(!buf->bauds)
 		{
-			fprintf(stderr, "buf->g_bauds==NULL\n");
+			fprintf(stderr, "buf->bauds==NULL\n");
 			return(1);
 		}
-		if(atg_pack_element(b, g_baud_label))
+		if(atg_pack_element(b, baud_label))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_rbox=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
-		if(!g_rbox)
+		atg_element *rbox=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!rbox)
 		{
 			fprintf(stderr, "atg_create_element_box failed\n");
 			return(1);
 		}
-		if(atg_pack_element(g_db, g_rbox))
+		if(atg_pack_element(db, rbox))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		b=g_rbox->elem.box;
-		atg_element *g_spectro=atg_create_element_image(buf->g_spectro_img);
-		if(!g_spectro)
+		b=rbox->elem.box;
+		atg_element *spectro=atg_create_element_image(buf->spectro_img);
+		if(!spectro)
 		{
 			fprintf(stderr, "atg_create_element_image failed\n");
 			return(1);
 		}
-		g_spectro->clickable=true;
-		g_spectro->userdata="SPEC";
-		if(atg_pack_element(b, g_spectro))
+		spectro->clickable=true;
+		spectro->userdata="SPEC";
+		if(atg_pack_element(b, spectro))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *g_set_tbl=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
-		if(!g_set_tbl)
+		atg_element *set_tbl=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
+		if(!set_tbl)
 		{
 			fprintf(stderr, "atg_create_element_box failed\n");
 			return(1);
 		}
-		g_set_tbl->cache=true;
-		if(atg_pack_element(b, g_set_tbl))
+		set_tbl->cache=true;
+		if(atg_pack_element(b, set_tbl))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		b=g_set_tbl->elem.box;
+		b=set_tbl->elem.box;
 		if(!b)
 		{
-			fprintf(stderr, "g_set_tbl->elem.box==NULL\n");
+			fprintf(stderr, "set_tbl->elem.box==NULL\n");
 			return(1);
 		}
 		for(size_t i=0;i<6;i++)
 		{
-			atg_element *l=atg_create_element_label(set_tbl[i], 12, (atg_colour){239, 239, 255, ATG_ALPHA_OPAQUE});
+			atg_element *l=atg_create_element_label(set_tbl_strings[i], 12, (atg_colour){239, 239, 255, ATG_ALPHA_OPAQUE});
 			if(!l)
 			{
 				fprintf(stderr, "atg_create_element_label failed\n");

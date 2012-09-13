@@ -11,11 +11,11 @@
 typedef struct
 {
 	atg_canvas *canvas;
-	SDL_Surface *g_constel_img, *g_phasing_img, *g_spectro_img;
-	bool *g_tx, *g_moni, *g_afc, *g_spl;
+	SDL_Surface *constel_img, *phasing_img, *spectro_img;
+	bool *tx, *moni, *afc, *spl;
 	unsigned int *bwsel;
-	atg_element *g_bw, *g_txb, *g_txf, *g_rxf, *g_rxs, *g_amp;
-	char *g_bauds;
+	atg_element *bw, *txb, *txf, *rxf, *rxs, *amp;
+	char *bauds;
 	char *intextleft[INLINES], *intextright[INLINES];
 	char *inr, *ing; size_t inrl, inri, ingl, ingi;
 	char *outtext[OUTLINES];

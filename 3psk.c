@@ -25,11 +25,11 @@
 #define BITBUFLEN	16
 #define PHASLEN	25
 
-#define txstart(lead)	if(G.g_tx&&!*G.g_tx) { *G.g_tx=true; txlead=max(txb(G), (lead)); }
-#define txb(G)	(((G).g_txb&&(G).g_txb->elem.spinner)?(G).g_txb->elem.spinner->value:0)
-#define txf(G)	(((G).g_txf&&(G).g_txf->elem.spinner)?(G).g_txf->elem.spinner->value:0)
-#define rxs(G)	(((G).g_rxs&&(G).g_rxs->elem.spinner)?(G).g_rxs->elem.spinner->value:0)
-#define amp(G)	(((G).g_amp&&(G).g_amp->elem.spinner)?(G).g_amp->elem.spinner->value:0)
+#define txstart(lead)	if(G.tx&&!*G.tx) { *G.tx=true; txlead=max(txb(G), (lead)); }
+#define txb(G)	(((G).txb&&(G).txb->elem.spinner)?(G).txb->elem.spinner->value:0)
+#define txf(G)	(((G).txf&&(G).txf->elem.spinner)?(G).txf->elem.spinner->value:0)
+#define rxs(G)	(((G).rxs&&(G).rxs->elem.spinner)?(G).rxs->elem.spinner->value:0)
+#define amp(G)	(((G).amp&&(G).amp->elem.spinner)?(G).amp->elem.spinner->value:0)
 
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
 
@@ -103,55 +103,55 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Failed to construct GUI\n");
 			return(e);
 		}
-		if(G.g_tx) *G.g_tx=false; else {fprintf(stderr, "Error: G.g_tx is NULL\n"); return(1);}
-		if(G.g_moni) *G.g_moni=init_moni; else {fprintf(stderr, "Error: G.g_moni is NULL\n"); return(1);}
-		if(G.g_afc) *G.g_afc=init_afc; else {fprintf(stderr, "Error: G.g_afc is NULL\n"); return(1);}
-		if(G.g_spl) *G.g_spl=!setrxf; else {fprintf(stderr, "Error: G.g_spl is NULL\n"); return(1);}
-		if(G.g_txb)
+		if(G.tx) *G.tx=false; else {fprintf(stderr, "Error: G.tx is NULL\n"); return(1);}
+		if(G.moni) *G.moni=init_moni; else {fprintf(stderr, "Error: G.moni is NULL\n"); return(1);}
+		if(G.afc) *G.afc=init_afc; else {fprintf(stderr, "Error: G.afc is NULL\n"); return(1);}
+		if(G.spl) *G.spl=!setrxf; else {fprintf(stderr, "Error: G.spl is NULL\n"); return(1);}
+		if(G.txb)
 		{
-			if((e=setspinval(G.g_txb, init_txb)))
+			if((e=setspinval(G.txb, init_txb)))
 			{
 				fprintf(stderr, "Failed to set TXB spinner\n");
 				return(1);
 			}
 		}
-		else {fprintf(stderr, "Error: G.g_txb is NULL\n"); return(1);}
-		if(G.g_txf)
+		else {fprintf(stderr, "Error: G.txb is NULL\n"); return(1);}
+		if(G.txf)
 		{
-			if((e=setspinval(G.g_txf, init_txf)))
+			if((e=setspinval(G.txf, init_txf)))
 			{
 				fprintf(stderr, "Failed to set TXF spinner\n");
 				return(1);
 			}
 		}
-		else {fprintf(stderr, "Error: G.g_txf is NULL\n"); return(1);}
-		if(G.g_rxf)
+		else {fprintf(stderr, "Error: G.txf is NULL\n"); return(1);}
+		if(G.rxf)
 		{
-			if((e=setspinval(G.g_rxf, rxf)))
+			if((e=setspinval(G.rxf, rxf)))
 			{
 				fprintf(stderr, "Failed to set RXF spinner\n");
 				return(1);
 			}
 		}
-		else {fprintf(stderr, "Error: G.g_rxf is NULL\n"); return(1);}
-		if(G.g_rxs)
+		else {fprintf(stderr, "Error: G.rxf is NULL\n"); return(1);}
+		if(G.rxs)
 		{
-			if((e=setspinval(G.g_rxs, init_rxs)))
+			if((e=setspinval(G.rxs, init_rxs)))
 			{
 				fprintf(stderr, "Failed to set RXS spinner\n");
 				return(1);
 			}
 		}
-		else {fprintf(stderr, "Error: G.g_rxs is NULL\n"); return(1);}
-		if(G.g_amp)
+		else {fprintf(stderr, "Error: G.rxs is NULL\n"); return(1);}
+		if(G.amp)
 		{
-			if((e=setspinval(G.g_amp, init_amp)))
+			if((e=setspinval(G.amp, init_amp)))
 			{
 				fprintf(stderr, "Failed to set AMP spinner\n");
 				return(1);
 			}
 		}
-		else {fprintf(stderr, "Error: G.g_amp is NULL\n"); return(1);}
+		else {fprintf(stderr, "Error: G.amp is NULL\n"); return(1);}
 	}
 	
 	unsigned int inp=NMACROS;
@@ -254,13 +254,13 @@ int main(int argc, char **argv)
 			fftw_execute(p[bws]);
 			int x,y;
 			ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
-			if(lined[frame%CONSDLEN]) line(G.g_constel_img, x, y, 60, 60, CONS_BG);
-			pset(G.g_constel_img, x, y, CONS_BG);
+			if(lined[frame%CONSDLEN]) line(G.constel_img, x, y, 60, 60, CONS_BG);
+			pset(G.constel_img, x, y, CONS_BG);
 			fftw_complex half=points[(frame+(CONSDLEN>>1))%CONSDLEN];
 			ztoxy(half, gsf, &x, &y);
 			atg_colour c=(cabs(half)>sens)?(atg_colour){0, 127, 0, ATG_ALPHA_OPAQUE}:(atg_colour){127, 0, 0, ATG_ALPHA_OPAQUE};
-			if(lined[(frame+(CONSDLEN>>1))%CONSDLEN]) line(G.g_constel_img, x, y, 60, 60, (atg_colour){0, 95, 95, ATG_ALPHA_OPAQUE});
-			pset(G.g_constel_img, x, y, c);
+			if(lined[(frame+(CONSDLEN>>1))%CONSDLEN]) line(G.constel_img, x, y, 60, 60, (atg_colour){0, 95, 95, ATG_ALPHA_OPAQUE});
+			pset(G.constel_img, x, y, c);
 			ztoxy(points[frame%CONSDLEN]=fftout[k], gsf, &x, &y);
 			bool green=cabs(fftout[k])>sens;
 			bool enough=false;
@@ -273,28 +273,28 @@ int main(int argc, char **argv)
 			bool spd=bws?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e2));
 			if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
 			{
-				line(G.g_constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
-				line(G.g_phasing_img, 0, 60, G.g_phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
+				line(G.constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
+				line(G.phasing_img, 0, 60, G.phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
 				int py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
-				line(G.g_phasing_img, da_ptr*G.g_phasing_img->w/PHASLEN, py, (da_ptr+1)*G.g_phasing_img->w/PHASLEN, py, PHAS_BG);
+				line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, PHAS_BG);
 				old_da[da_ptr]=(da<0)?da+M_PI*4/3.0:da;
 				t_da+=old_da[da_ptr]-M_PI*2/3.0;
 				py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
-				line(G.g_phasing_img, da_ptr*G.g_phasing_img->w/PHASLEN, py, (da_ptr+1)*G.g_phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
+				line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
 				unsigned int dt=t-symtime[st_ptr];
 				double baud=w.sample_rate*(st_loop?PHASLEN:st_ptr)/(double)dt;
-				snprintf(G.g_bauds, 8, "RXB %03d", (int)floor(baud+.5));
+				snprintf(G.bauds, 8, "RXB %03d", (int)floor(baud+.5));
 				symtime[st_ptr]=t;
 				st_ptr=(st_ptr+1)%PHASLEN;
 				if(!st_ptr) st_loop=true;
 				da_ptr=(da_ptr+1)%PHASLEN;
-				if(G.g_afc&&*G.g_afc&&!da_ptr)
+				if(G.afc&&*G.afc&&!da_ptr)
 				{
 					double ch=(t_da/(double)PHASLEN)*10.0;
 					if(fabs(ch)>0.5)
 					{
 						rxf+=ch;
-						setspinval(G.g_rxf, floor(rxf+.5));
+						setspinval(G.rxf, floor(rxf+.5));
 						fch=true;
 					}
 					t_da=0;
@@ -342,12 +342,12 @@ int main(int argc, char **argv)
 				free(text);
 			}
 			fch=false;
-			pset(G.g_constel_img, x, y, green?(atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE}:(atg_colour){255, 0, 0, ATG_ALPHA_OPAQUE});
+			pset(G.constel_img, x, y, green?(atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE}:(atg_colour){255, 0, 0, ATG_ALPHA_OPAQUE});
 			frame++;
 			if(t>(lastflip+w.sample_rate/8))
 			{
 				lastflip+=w.sample_rate/8;
-				if(G.g_spl) *G.g_spl=(rxf!=txf(G));
+				if(G.spl) *G.spl=(rxf!=txf(G));
 				if(true)
 				{
 					if(G.ingi>((INLINES+1)*INLINELEN))
@@ -444,17 +444,17 @@ int main(int argc, char **argv)
 											txstart(8);
 										break;
 										case SDLK_F8:
-											if(G.g_tx) *G.g_tx=false;
+											if(G.tx) *G.tx=false;
 											txlead=max(txb(G)/2, 8);
 										break;
 										case SDLK_ESCAPE:
-											if(G.g_tx) *G.g_tx=false;
+											if(G.tx) *G.tx=false;
 											txlead=0;
 											G.inri=0;
 										break;
 										case SDLK_F9:
 											rxf=txf(G);
-											setspinval(G.g_rxf, floor(rxf+.5));
+											setspinval(G.rxf, floor(rxf+.5));
 										break;
 										case SDLK_BACKSPACE:
 										{
@@ -530,11 +530,11 @@ int main(int argc, char **argv)
 									switch(click.button)
 									{
 										case ATG_MB_LEFT:
-											setspinval(G.g_txf, min(max((click.pos.x+20)*spec_hpp, 200), 800));
+											setspinval(G.txf, min(max((click.pos.x+20)*spec_hpp, 200), 800));
 											/* fallthrough */
 										case ATG_MB_RIGHT:
 											rxf=min(max((click.pos.x+20)*spec_hpp, 200), 800);
-											setspinval(G.g_rxf, floor(rxf+.5));
+											setspinval(G.rxf, floor(rxf+.5));
 										break;
 										default:
 											// ignore
@@ -561,7 +561,7 @@ int main(int argc, char **argv)
 							atg_ev_value value=e.event.value;
 							if(value.e)
 							{
-								if(value.e==G.g_bw)
+								if(value.e==G.bw)
 								{
 									bw=(double[4]){10, 30, 150, 750}[value.value];
 									blklen=floor(w.sample_rate/bw);
@@ -578,7 +578,7 @@ int main(int argc, char **argv)
 									fprintf(stderr, "frontend: new Actual IF: %g Hz\n", truif);
 									gsf=250.0/(double)blklen;
 									sens=(double)blklen/16.0;
-									SDL_FillRect(G.g_constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(G.g_constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
+									SDL_FillRect(G.constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(G.constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
 									for(size_t i=0;i<CONSLEN;i++)
 									{
 										points[i]=0;
@@ -590,8 +590,8 @@ int main(int argc, char **argv)
 								{
 									if(strcmp((const char *)value.e->userdata, "TXF")==0)
 									{
-										if(G.g_spl&&!*G.g_spl)
-											setspinval(G.g_rxf, rxf=value.value);
+										if(G.spl&&!*G.spl)
+											setspinval(G.rxf, rxf=value.value);
 									}
 									else if(strcmp((const char *)value.e->userdata, "RXF")==0)
 									{
@@ -607,11 +607,11 @@ int main(int argc, char **argv)
 								if(toggle.e->userdata)
 								{
 									if(strcmp((const char *)toggle.e->userdata, "TX")==0)
-										txlead=max(txb(G)/((G.g_tx&&*G.g_tx)?1:2), 8);
+										txlead=max(txb(G)/((G.tx&&*G.tx)?1:2), 8);
 									else if(strcmp((const char *)toggle.e->userdata, "SPL")==0)
 									{
 										if(!toggle.state)
-											setspinval(G.g_rxf, rxf=txf(G));
+											setspinval(G.rxf, rxf=txf(G));
 									}
 								}
 							}
@@ -623,7 +623,7 @@ int main(int argc, char **argv)
 			}
 		}
 		long si=read_sample(w, stdin)-wzero;
-		if((G.g_tx&&*G.g_tx)||txlead)
+		if((G.tx&&*G.tx)||txlead)
 		{
 			if((int)((t*txb(G))%w.sample_rate)<txb(G))
 			{
@@ -641,7 +641,7 @@ int main(int argc, char **argv)
 						const char buf[2]={G.inr[0], 0};
 						if(*buf=='\r')
 						{
-							*G.g_tx=false;
+							*G.tx=false;
 							txlead=max(txb(G)/2, 8);
 							txbits=(bbuf){0, NULL};
 						}
@@ -686,7 +686,7 @@ int main(int argc, char **argv)
 			double tx=cos(ft+txphi)*txmag/3.0;
 			if(wzero) tx+=0.5;
 			write_sample(w, stdout, tx*(1<<w.bits_per_sample)*.8);
-			if(G.g_moni&&*G.g_moni) si=tx*(1<<w.bits_per_sample)*.6-wzero;
+			if(G.moni&&*G.moni) si=tx*(1<<w.bits_per_sample)*.6-wzero;
 		}
 		else
 			write_sample(w, stdout, wzero);
@@ -697,22 +697,22 @@ int main(int argc, char **argv)
 		if(!(t%speclen))
 		{
 			fftw_execute(sp_p);
-			SDL_FillRect(G.g_spectro_img, &(SDL_Rect){0, 0, 160, 60}, SDL_MapRGB(G.g_spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
+			SDL_FillRect(G.spectro_img, &(SDL_Rect){0, 0, 160, 60}, SDL_MapRGB(G.spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
 			for(unsigned int h=1;h<9;h++)
 			{
 				unsigned int x=floor(h*100/spec_hpp)-20;
-				line(G.g_spectro_img, x, 0, x, 59, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
+				line(G.spectro_img, x, 0, x, 59, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
 			}
 			unsigned int rx=floor(rxf/spec_hpp)-20;
-			line(G.g_spectro_img, rx, 0, rx, 59, (atg_colour){0, 47, 0, ATG_ALPHA_OPAQUE});
+			line(G.spectro_img, rx, 0, rx, 59, (atg_colour){0, 47, 0, ATG_ALPHA_OPAQUE});
 			unsigned int tx=floor(txf(G)/spec_hpp)-20;
-			line(G.g_spectro_img, tx, 0, tx, 59, (atg_colour){63, 0, 0, ATG_ALPHA_OPAQUE});
+			line(G.spectro_img, tx, 0, tx, 59, (atg_colour){63, 0, 0, ATG_ALPHA_OPAQUE});
 			for(unsigned int j=0;j<160;j++)
 			{
 				for(unsigned int k=1;k<8;k++)
-					pset(G.g_spectro_img, j, spec_pt[(spec_which+k)%8][j], (atg_colour){k*20, k*20, 0, ATG_ALPHA_OPAQUE});
+					pset(G.spectro_img, j, spec_pt[(spec_which+k)%8][j], (atg_colour){k*20, k*20, 0, ATG_ALPHA_OPAQUE});
 				double mag=4*sqrt(cabs(specout[j+20]));
-				pset(G.g_spectro_img, j, spec_pt[spec_which][j]=max(59-mag, 0), (atg_colour){255, 255, 0, ATG_ALPHA_OPAQUE});
+				pset(G.spectro_img, j, spec_pt[spec_which][j]=max(59-mag, 0), (atg_colour){255, 255, 0, ATG_ALPHA_OPAQUE});
 			}
 			spec_which=(spec_which+1)%8;
 		}
