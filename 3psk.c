@@ -25,26 +25,30 @@
 #define BITBUFLEN	16
 #define PHASLEN	25
 
-#define txstart(lead)	if(G.g_tx&&!*G.g_tx) { *G.g_tx=true; txlead=max(txb, (lead)); }
+#define txstart(lead)	if(G.g_tx&&!*G.g_tx) { *G.g_tx=true; txlead=max(txb(G), (lead)); }
+#define txb(G)	(((G).g_txb&&(G).g_txb->elem.spinner)?(G).g_txb->elem.spinner->value:0)
+#define txf(G)	(((G).g_txf&&(G).g_txf->elem.spinner)?(G).g_txf->elem.spinner->value:0)
+#define rxs(G)	(((G).g_rxs&&(G).g_rxs->elem.spinner)?(G).g_rxs->elem.spinner->value:0)
+#define amp(G)	(((G).g_amp&&(G).g_amp->elem.spinner)?(G).g_amp->elem.spinner->value:0)
 
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
 
 int main(int argc, char **argv)
 {
-	double txf=440; // centre frequency, Hz
-	double rxf=txf;
+	unsigned int init_txf=440; // centre frequency, Hz
+	double rxf=init_txf;
 	bool setrxf=false;
 	double aif=3000; // approximate IF, Hz
-	unsigned int rxs=28;
-	unsigned int amp=10;
+	unsigned int init_rxs=28;
+	unsigned int init_amp=10;
 	bool init_moni=true, init_afc=false;
-	unsigned int txb=60;
+	unsigned int init_txb=60;
 	unsigned int bws=2; // TODO: --bws= option, and --bw= (will need a list)
 	for(int arg=1;arg<argc;arg++)
 	{
 		if(strncmp(argv[arg], "--txf=", 6)==0)
 		{
-			sscanf(argv[arg]+7, "%lg", &txf);
+			sscanf(argv[arg]+7, "%u", &init_txf);
 		}
 		else if(strncmp(argv[arg], "--rxf=", 6)==0)
 		{
@@ -53,7 +57,7 @@ int main(int argc, char **argv)
 		}
 		else if(strncmp(argv[arg], "--rxs=", 6)==0)
 		{
-			sscanf(argv[arg]+7, "%u", &rxs);
+			sscanf(argv[arg]+7, "%u", &init_rxs);
 		}
 		else if(strncmp(argv[arg], "--if=", 5)==0)
 		{
@@ -61,11 +65,11 @@ int main(int argc, char **argv)
 		}
 		else if(strncmp(argv[arg], "--amp=", 6)==0)
 		{
-			sscanf(argv[arg]+5, "%u", &amp);
+			sscanf(argv[arg]+5, "%u", &init_amp);
 		}
 		else if(strncmp(argv[arg], "--txb=", 6)==0)
 		{
-			sscanf(argv[arg]+6, "%u", &txb);
+			sscanf(argv[arg]+6, "%u", &init_txb);
 		}
 		else if(strcmp(argv[arg], "--moni")==0)
 		{
@@ -89,7 +93,7 @@ int main(int argc, char **argv)
 			return(1);
 		}
 	}
-	if(!setrxf) rxf=txf;
+	if(!setrxf) rxf=init_txf;
 	fprintf(stderr, "Constructing GUI\n");
 	gui G;
 	{
@@ -105,7 +109,7 @@ int main(int argc, char **argv)
 		if(G.g_spl) *G.g_spl=!setrxf; else {fprintf(stderr, "Error: G.g_spl is NULL\n"); return(1);}
 		if(G.g_txb)
 		{
-			if((e=setspinval(G.g_txb, txb)))
+			if((e=setspinval(G.g_txb, init_txb)))
 			{
 				fprintf(stderr, "Failed to set TXB spinner\n");
 				return(1);
@@ -114,7 +118,7 @@ int main(int argc, char **argv)
 		else {fprintf(stderr, "Error: G.g_txb is NULL\n"); return(1);}
 		if(G.g_txf)
 		{
-			if((e=setspinval(G.g_txf, txf)))
+			if((e=setspinval(G.g_txf, init_txf)))
 			{
 				fprintf(stderr, "Failed to set TXF spinner\n");
 				return(1);
@@ -132,7 +136,7 @@ int main(int argc, char **argv)
 		else {fprintf(stderr, "Error: G.g_rxf is NULL\n"); return(1);}
 		if(G.g_rxs)
 		{
-			if((e=setspinval(G.g_rxs, rxs)))
+			if((e=setspinval(G.g_rxs, init_rxs)))
 			{
 				fprintf(stderr, "Failed to set RXS spinner\n");
 				return(1);
@@ -141,7 +145,7 @@ int main(int argc, char **argv)
 		else {fprintf(stderr, "Error: G.g_rxs is NULL\n"); return(1);}
 		if(G.g_amp)
 		{
-			if((e=setspinval(G.g_amp, amp)))
+			if((e=setspinval(G.g_amp, init_amp)))
 			{
 				fprintf(stderr, "Failed to set AMP spinner\n");
 				return(1);
@@ -266,7 +270,7 @@ int main(int argc, char **argv)
 			else
 				enough=true;
 			fftw_complex dz=bws?fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN]:fftout[k]/points[(frame+CONSDLEN-1)%CONSDLEN];
-			bool spd=bws?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)rxs-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)rxs-32)/4.0)*2e2));
+			bool spd=bws?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e2));
 			if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
 			{
 				line(G.g_constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
@@ -290,11 +294,7 @@ int main(int argc, char **argv)
 					if(fabs(ch)>0.5)
 					{
 						rxf+=ch;
-						if(G.g_rxf&&(G.g_rxf->type==ATG_SPINNER))
-						{
-							atg_spinner *s=G.g_rxf->elem.spinner;
-							if(s) s->value=floor(rxf+.5);
-						}
+						setspinval(G.g_rxf, floor(rxf+.5));
 						fch=true;
 					}
 					t_da=0;
@@ -347,7 +347,7 @@ int main(int argc, char **argv)
 			if(t>(lastflip+w.sample_rate/8))
 			{
 				lastflip+=w.sample_rate/8;
-				if(G.g_spl) *G.g_spl=(rxf!=txf);
+				if(G.g_spl) *G.g_spl=(rxf!=txf(G));
 				if(true)
 				{
 					if(G.ingi>((INLINES+1)*INLINELEN))
@@ -445,7 +445,7 @@ int main(int argc, char **argv)
 										break;
 										case SDLK_F8:
 											if(G.g_tx) *G.g_tx=false;
-											txlead=max(txb/2, 8);
+											txlead=max(txb(G)/2, 8);
 										break;
 										case SDLK_ESCAPE:
 											if(G.g_tx) *G.g_tx=false;
@@ -453,12 +453,8 @@ int main(int argc, char **argv)
 											G.inri=0;
 										break;
 										case SDLK_F9:
-											rxf=txf;
-											if(G.g_rxf&&(G.g_rxf->type==ATG_SPINNER))
-											{
-												atg_spinner *s=G.g_rxf->elem.spinner;
-												if(s) s->value=floor(rxf+.5);
-											}
+											rxf=txf(G);
+											setspinval(G.g_rxf, floor(rxf+.5));
 										break;
 										case SDLK_BACKSPACE:
 										{
@@ -534,20 +530,11 @@ int main(int argc, char **argv)
 									switch(click.button)
 									{
 										case ATG_MB_LEFT:
-											txf=min(max((click.pos.x+20)*spec_hpp, 200), 800);
-											if(G.g_txf&&(G.g_txf->type==ATG_SPINNER))
-											{
-												atg_spinner *s=G.g_txf->elem.spinner;
-												if(s) s->value=floor(txf+.5);
-											}
+											setspinval(G.g_txf, min(max((click.pos.x+20)*spec_hpp, 200), 800));
 											/* fallthrough */
 										case ATG_MB_RIGHT:
 											rxf=min(max((click.pos.x+20)*spec_hpp, 200), 800);
-											if(G.g_rxf&&(G.g_rxf->type==ATG_SPINNER))
-											{
-												atg_spinner *s=G.g_rxf->elem.spinner;
-												if(s) s->value=floor(rxf+.5);
-											}
+											setspinval(G.g_rxf, floor(rxf+.5));
 										break;
 										default:
 											// ignore
@@ -601,38 +588,15 @@ int main(int argc, char **argv)
 								}
 								else if(value.e->userdata)
 								{
-									if(strcmp((const char *)value.e->userdata, "RXS")==0)
+									if(strcmp((const char *)value.e->userdata, "TXF")==0)
 									{
-										rxs=value.value;
-									}
-									else if(strcmp((const char *)value.e->userdata, "TXB")==0)
-									{
-										txb=value.value;
-									}
-									else if(strcmp((const char *)value.e->userdata, "TXF")==0)
-									{
-										bool spl=(rxf!=txf);
-										txf=value.value;
-										if(!spl)
-										{
-											rxf=txf;
-											if(G.g_rxf&&(G.g_rxf->type==ATG_SPINNER))
-											{
-												atg_spinner *s=G.g_rxf->elem.spinner;
-												if(s) s->value=floor(rxf+.5);
-											}
-										}
+										if(G.g_spl&&!*G.g_spl)
+											setspinval(G.g_rxf, rxf=value.value);
 									}
 									else if(strcmp((const char *)value.e->userdata, "RXF")==0)
 									{
 										rxf=value.value;
 									}
-									else if(strcmp((const char *)value.e->userdata, "AMP")==0)
-									{
-										amp=value.value;
-									}
-									else
-										fprintf(stderr, "Changed an unknown spinner!\n");
 								}
 							}
 						break;
@@ -643,27 +607,12 @@ int main(int argc, char **argv)
 								if(toggle.e->userdata)
 								{
 									if(strcmp((const char *)toggle.e->userdata, "TX")==0)
-										txlead=max(txb/((G.g_tx&&*G.g_tx)?1:2), 8);
-									else if(strcmp((const char *)toggle.e->userdata, "MONI")==0)
-									{
-									}
-									else if(strcmp((const char *)toggle.e->userdata, "AFC")==0)
-									{
-									}
+										txlead=max(txb(G)/((G.g_tx&&*G.g_tx)?1:2), 8);
 									else if(strcmp((const char *)toggle.e->userdata, "SPL")==0)
 									{
 										if(!toggle.state)
-										{
-											rxf=txf;
-											if(G.g_rxf&&(G.g_rxf->type==ATG_SPINNER))
-											{
-												atg_spinner *s=G.g_rxf->elem.spinner;
-												if(s) s->value=floor(rxf+.5);
-											}
-										}
+											setspinval(G.g_rxf, rxf=txf(G));
 									}
-									else
-										fprintf(stderr, "Clicked on unknown toggle '%s'!\n", (const char *)toggle.e->userdata);
 								}
 							}
 						break;
@@ -676,7 +625,7 @@ int main(int argc, char **argv)
 		long si=read_sample(w, stdin)-wzero;
 		if((G.g_tx&&*G.g_tx)||txlead)
 		{
-			if(((t*txb)%w.sample_rate)<txb)
+			if((int)((t*txb(G))%w.sample_rate)<txb(G))
 			{
 				if(txlead)
 				{
@@ -693,7 +642,7 @@ int main(int argc, char **argv)
 						if(*buf=='\r')
 						{
 							*G.g_tx=false;
-							txlead=max(txb/2, 8);
+							txlead=max(txb(G)/2, 8);
 							txbits=(bbuf){0, NULL};
 						}
 						else
@@ -717,7 +666,7 @@ int main(int argc, char **argv)
 					}
 				}
 			}
-			double sweep=txb*M_PI*1.5/(double)w.sample_rate;
+			double sweep=txb(G)*M_PI*1.5/(double)w.sample_rate;
 			double txaim=txsetp*M_PI*2/3.0;
 			if((txphi>txaim-M_PI)&&(txphi<=txaim))
 				txphi=min(txphi+sweep, txaim);
@@ -733,7 +682,7 @@ int main(int argc, char **argv)
 				txphi=txaim;
 			}
 			double txmag=cos(M_PI/3)/cos(fmod(txphi, M_PI*2/3.0)-M_PI/3.0);
-			double ft=t*2*M_PI*txf/w.sample_rate;
+			double ft=t*2*M_PI*txf(G)/w.sample_rate;
 			double tx=cos(ft+txphi)*txmag/3.0;
 			if(wzero) tx+=0.5;
 			write_sample(w, stdout, tx*(1<<w.bits_per_sample)*.8);
@@ -744,7 +693,7 @@ int main(int argc, char **argv)
 		if(wzero) si<<=1;
 		double sv=si/(double)(1<<w.bits_per_sample);
 		double phi=t*2*M_PI*(truif-rxf)/w.sample_rate;
-		fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*amp/5.0;
+		fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*amp(G)/5.0;
 		if(!(t%speclen))
 		{
 			fftw_execute(sp_p);
@@ -756,7 +705,7 @@ int main(int argc, char **argv)
 			}
 			unsigned int rx=floor(rxf/spec_hpp)-20;
 			line(G.g_spectro_img, rx, 0, rx, 59, (atg_colour){0, 47, 0, ATG_ALPHA_OPAQUE});
-			unsigned int tx=floor(txf/spec_hpp)-20;
+			unsigned int tx=floor(txf(G)/spec_hpp)-20;
 			line(G.g_spectro_img, tx, 0, tx, 59, (atg_colour){63, 0, 0, ATG_ALPHA_OPAQUE});
 			for(unsigned int j=0;j<160;j++)
 			{
