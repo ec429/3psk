@@ -16,12 +16,12 @@
 #include <fftw3.h>
 
 #include <atg.h>
-#include "wav.h"
 #include "bits.h"
 #include "varicode.h"
 #include "strbuf.h"
 #include "gui.h"
 #include "frontend.h"
+#include "audio.h"
 
 #define CONSLEN	1024
 #define CONSDLEN	((int)floor(CONSLEN*min(bw, 750)/750))
@@ -425,22 +425,16 @@ int main(int argc, char **argv)
 	
 	unsigned int inp=NMACROS;
 	
-	fprintf(stderr, "Setting up decoder frontend\n");
-	wavhdr w;
-	if(read_wh44(stdin, &w))
-	{
-		fprintf(stderr, "Failed to read WAV header; werrno=%d\n", werrno);
-		return(1);
-	}
-	if(w.num_channels!=1) // TODO handle a stereo I/Q (ie. complex) input
-	{
-		fprintf(stderr, "Too many channels; input WAV stream should be mono\n");
-		return(1);
-	}
+	fprintf(stderr, "Starting audio subsystem\n");
+	audiobuf rxaud, txaud;
+	if(init_audiorx(&rxaud)) return(1);
+	if(init_audiotx(&txaud)) return(1);
 	
-	fprintf(stderr, "frontend: Audio sample rate: %lu Hz\n", (unsigned long)w.sample_rate);
-	unsigned long blklen=floor(w.sample_rate/(double)bandwidths[bws]);
-	double bw=w.sample_rate/(double)blklen;
+	fprintf(stderr, "Setting up decoder frontend\n");
+	
+	fprintf(stderr, "frontend: Audio sample rate: %u Hz\n", rxaud.srate);
+	unsigned long blklen=floor(rxaud.srate/(double)bandwidths[bws]);
+	double bw=rxaud.srate/(double)blklen;
 	
 	fprintf(stderr, "frontend: FFT block length: %lu samples\n", blklen);
 	if(blklen>4095)
@@ -449,23 +443,22 @@ int main(int argc, char **argv)
 		return(1);
 	}
 	fprintf(stderr, "frontend: Filter bandwidth is %g Hz\n", bw);
-	unsigned long k = max(floor((aif * (double)blklen / (double)w.sample_rate)+0.5), 1);
-	double truif=(k*w.sample_rate/(double)blklen);
+	unsigned long k = max(floor((aif * (double)blklen / (double)rxaud.srate)+0.5), 1);
+	double truif=(k*rxaud.srate/(double)blklen);
 	fprintf(stderr, "frontend: Actual IF: %g Hz\n", truif);
-	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/(double)bandwidths[0]));
-	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/(double)bandwidths[0]));
-	unsigned long speclen=max(floor(w.sample_rate/5.0), 360), spechalf=(speclen>>1)+1;
-	double spec_hpp=w.sample_rate/(double)speclen;
+	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*floor(rxaud.srate/(double)bandwidths[0]));
+	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*floor(rxaud.srate/(double)bandwidths[0]));
+	unsigned long speclen=max(floor(rxaud.srate/5.0), 360), spechalf=(speclen>>1)+1;
+	double spec_hpp=rxaud.srate/(double)speclen;
 	double *specin=fftw_malloc(sizeof(double)*speclen);
 	fftw_complex *specout=fftw_malloc(sizeof(fftw_complex)*spechalf);
 	fftw_set_timelimit(2.0);
 	fprintf(stderr, "frontend: Preparing FFT plans\n");
 	fftw_plan p[4], sp_p;
 	for(unsigned int i=0;i<4;i++)
-		p[i]=fftw_plan_dft_1d(floor(w.sample_rate/(double)bandwidths[i]), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+		p[i]=fftw_plan_dft_1d(floor(rxaud.srate/(double)bandwidths[i]), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	sp_p=fftw_plan_dft_r2c_1d(speclen, specin, specout, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	fprintf(stderr, "frontend: Ready\n");
-	long wzero=zeroval(w);
 	
 	fprintf(stderr, "Setting up decoder\n");
 	double gsf=250.0/(double)blklen;
@@ -506,18 +499,13 @@ int main(int argc, char **argv)
 	unsigned int txsetp=0;
 	unsigned int txlead=0;
 	
-	if(write_wh44(stdout, w))
-	{
-		fprintf(stderr, "Failed to write WAV header\n");
-		return(1);
-	}
 	int errupt=0;
+	unsigned long t=0, txt=0, frame=0, lastflip=0;
 	fprintf(stderr, "Starting main loop\n");
-	for(unsigned int t=0;((t<w.num_samples)||(w.data_len==(uint32_t)(-1)))&&!errupt;t++)
+	while(!errupt)
 	{
 		if(!(t%blklen))
 		{
-			static unsigned int frame=0, lastflip=0;
 			fftw_execute(p[bws]);
 			int x,y;
 			ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
@@ -549,7 +537,7 @@ int main(int argc, char **argv)
 				py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
 				line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
 				unsigned int dt=t-symtime[st_ptr];
-				double baud=w.sample_rate*(st_loop?PHASLEN:st_ptr)/(double)dt;
+				double baud=rxaud.srate*(st_loop?PHASLEN:st_ptr)/(double)dt;
 				snprintf(G.bauds, 8, "RXB %03d", (int)floor(baud+.5));
 				symtime[st_ptr]=t;
 				st_ptr=(st_ptr+1)%PHASLEN;
@@ -611,58 +599,55 @@ int main(int argc, char **argv)
 			fch=false;
 			pset(G.constel_img, x, y, green?(atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE}:(atg_colour){255, 0, 0, ATG_ALPHA_OPAQUE});
 			frame++;
-			if(t>(lastflip+w.sample_rate/8))
+			if(t>lastflip)
 			{
-				lastflip+=w.sample_rate/8;
+				lastflip+=SAMPLE_RATE/8;
 				if(G.spl) *G.spl=(rxf!=txf(G));
-				if(true)
+				if(G.ingi>((INLINES+1)*INLINELEN))
 				{
-					if(G.ingi>((INLINES+1)*INLINELEN))
+					G.ingi-=INLINELEN;
+					memmove(G.ing, G.ing+INLINELEN, G.ingi);
+				}
+				for(unsigned int i=0;i<INLINES;i++)
+					G.intextleft[i][0]=G.intextright[i][0]=0;
+				unsigned int x=0,y=0;
+				for(size_t p=0;p<G.ingi;p++)
+				{
+					G.intextleft[y][x++]=G.ing[p];
+					G.intextleft[y][x]=0;
+					if((G.ing[p]=='\n')||(x>=INLINELEN))
 					{
-						G.ingi-=INLINELEN;
-						memmove(G.ing, G.ing+INLINELEN, G.ingi);
-					}
-					for(unsigned int i=0;i<INLINES;i++)
-						G.intextleft[i][0]=G.intextright[i][0]=0;
-					unsigned int x=0,y=0;
-					for(size_t p=0;p<G.ingi;p++)
-					{
-						G.intextleft[y][x++]=G.ing[p];
-						G.intextleft[y][x]=0;
-						if((G.ing[p]=='\n')||(x>=INLINELEN))
+						if(y<INLINES-1)
+							y++;
+						else
 						{
-							if(y<INLINES-1)
-								y++;
-							else
-							{
-								for(unsigned int i=0;i<y;i++)
-									strcpy(G.intextleft[i], G.intextleft[i+1]);
-								G.intextleft[y][0]=0;
-							}
-							x=0;
+							for(unsigned int i=0;i<y;i++)
+								strcpy(G.intextleft[i], G.intextleft[i+1]);
+							G.intextleft[y][0]=0;
 						}
+						x=0;
 					}
-					unsigned int sx=0;
-					for(size_t p=0;p<G.inri;p++)
+				}
+				unsigned int sx=0;
+				for(size_t p=0;p<G.inri;p++)
+				{
+					x++;
+					G.intextright[y][sx++]=G.inr[p];
+					G.intextright[y][sx]=0;
+					if((G.inr[p]=='\n')||(x>=INLINELEN))
 					{
-						x++;
-						G.intextright[y][sx++]=G.inr[p];
-						G.intextright[y][sx]=0;
-						if((G.inr[p]=='\n')||(x>=INLINELEN))
+						if(y<INLINES-1)
+							y++;
+						else
 						{
-							if(y<INLINES-1)
-								y++;
-							else
+							for(unsigned int i=0;i<y;i++)
 							{
-								for(unsigned int i=0;i<y;i++)
-								{
-									strcpy(G.intextleft[i], G.intextleft[i+1]);
-									strcpy(G.intextright[i], G.intextright[i+1]);
-								}
-								G.intextleft[y][0]=G.intextright[y][0]=0;
+								strcpy(G.intextleft[i], G.intextleft[i+1]);
+								strcpy(G.intextright[i], G.intextright[i+1]);
 							}
-							x=sx=0;
+							G.intextleft[y][0]=G.intextright[y][0]=0;
 						}
+						x=sx=0;
 					}
 				}
 				for(unsigned int i=0;i<NMACROS;i++)
@@ -831,8 +816,8 @@ int main(int argc, char **argv)
 								if(value.e==G.bw)
 								{
 									bw=bandwidths[value.value];
-									blklen=floor(w.sample_rate/bw);
-									bw=w.sample_rate/(double)blklen;
+									blklen=floor(rxaud.srate/bw);
+									bw=rxaud.srate/(double)blklen;
 									fprintf(stderr, "frontend: new FFT block length: %lu samples\n", blklen);
 									if(blklen>4095)
 									{
@@ -840,8 +825,8 @@ int main(int argc, char **argv)
 										return(1);
 									}
 									fprintf(stderr, "frontend: new filter bandwidth is %g Hz\n", bw);
-									k=max(floor((aif * (double)blklen / (double)w.sample_rate)+0.5), 1);
-									truif=(k*w.sample_rate/(double)blklen);
+									k=max(floor((aif * (double)blklen / (double)rxaud.srate)+0.5), 1);
+									truif=(k*rxaud.srate/(double)blklen);
 									fprintf(stderr, "frontend: new Actual IF: %g Hz\n", truif);
 									gsf=250.0/(double)blklen;
 									sens=(double)blklen/16.0;
@@ -889,10 +874,11 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-		long si=read_sample(w, stdin)-wzero;
+		int16_t si;
+		bool havesi=!rxsample(&rxaud, &si);
 		if((G.tx&&*G.tx)||txlead)
 		{
-			if((int)((t*txb(G))%w.sample_rate)<txb(G))
+			if((int)((txt*txb(G))%txaud.srate)<txb(G))
 			{
 				if(txlead)
 				{
@@ -933,7 +919,7 @@ int main(int argc, char **argv)
 					}
 				}
 			}
-			double sweep=txb(G)*M_PI*1.5/(double)w.sample_rate;
+			double sweep=txb(G)*M_PI*1.5/(double)rxaud.srate;
 			double txaim=txsetp*M_PI*2/3.0;
 			if((txphi>txaim-M_PI)&&(txphi<=txaim))
 				txphi=min(txphi+sweep, txaim);
@@ -949,43 +935,52 @@ int main(int argc, char **argv)
 				txphi=txaim;
 			}
 			double txmag=cos(M_PI/3)/cos(fmod(txphi, M_PI*2/3.0)-M_PI/3.0);
-			double ft=t*2*M_PI*txf(G)/w.sample_rate;
+			double ft=txt*2*M_PI*txf(G)/txaud.srate;
 			double tx=cos(ft+txphi)*txmag/3.0;
-			if(wzero) tx+=0.5;
-			write_sample(w, stdout, tx*(1<<w.bits_per_sample)*.8);
-			if(G.moni&&*G.moni) si=tx*(1<<w.bits_per_sample)*.6-wzero;
+			txsample(&txaud, tx*(1<<16)*.8);
+			txt++;
+			if(G.moni&&*G.moni)
+			{
+				si=tx*(1<<16)*.6;
+				havesi=true;
+			}
 		}
 		else
-			write_sample(w, stdout, wzero);
-		if(wzero) si<<=1;
-		double sv=si/(double)(1<<w.bits_per_sample);
-		double phi=t*2*M_PI*(truif-rxf)/w.sample_rate;
-		fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*amp(G)/5.0;
-		if(!(t%speclen))
+			txsample(&txaud, 0);
+		if(havesi)
 		{
-			fftw_execute(sp_p);
-			SDL_FillRect(G.spectro_img, &(SDL_Rect){0, 0, 160, 60}, SDL_MapRGB(G.spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
-			for(unsigned int h=1;h<9;h++)
+			double sv=si/(double)(1<<16);
+			double phi=t*2*M_PI*(truif-rxf)/rxaud.srate;
+			fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*amp(G)/5.0;
+			if(!(t%speclen))
 			{
-				unsigned int x=floor(h*100/spec_hpp)-20;
-				line(G.spectro_img, x, 0, x, 59, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
+				fftw_execute(sp_p);
+				SDL_FillRect(G.spectro_img, &(SDL_Rect){0, 0, 160, 60}, SDL_MapRGB(G.spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
+				for(unsigned int h=1;h<9;h++)
+				{
+					unsigned int x=floor(h*100/spec_hpp)-20;
+					line(G.spectro_img, x, 0, x, 59, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
+				}
+				unsigned int rx=floor(rxf/spec_hpp)-20;
+				line(G.spectro_img, rx, 0, rx, 59, (atg_colour){0, 47, 0, ATG_ALPHA_OPAQUE});
+				unsigned int tx=floor(txf(G)/spec_hpp)-20;
+				line(G.spectro_img, tx, 0, tx, 59, (atg_colour){63, 0, 0, ATG_ALPHA_OPAQUE});
+				for(unsigned int j=0;j<160;j++)
+				{
+					for(unsigned int k=1;k<8;k++)
+						pset(G.spectro_img, j, spec_pt[(spec_which+k)%8][j], (atg_colour){k*20, k*20, 0, ATG_ALPHA_OPAQUE});
+					double mag=4*sqrt(cabs(specout[j+20]));
+					pset(G.spectro_img, j, spec_pt[spec_which][j]=max(59-mag, 0), (atg_colour){255, 255, 0, ATG_ALPHA_OPAQUE});
+				}
+				spec_which=(spec_which+1)%8;
 			}
-			unsigned int rx=floor(rxf/spec_hpp)-20;
-			line(G.spectro_img, rx, 0, rx, 59, (atg_colour){0, 47, 0, ATG_ALPHA_OPAQUE});
-			unsigned int tx=floor(txf(G)/spec_hpp)-20;
-			line(G.spectro_img, tx, 0, tx, 59, (atg_colour){63, 0, 0, ATG_ALPHA_OPAQUE});
-			for(unsigned int j=0;j<160;j++)
-			{
-				for(unsigned int k=1;k<8;k++)
-					pset(G.spectro_img, j, spec_pt[(spec_which+k)%8][j], (atg_colour){k*20, k*20, 0, ATG_ALPHA_OPAQUE});
-				double mag=4*sqrt(cabs(specout[j+20]));
-				pset(G.spectro_img, j, spec_pt[spec_which][j]=max(59-mag, 0), (atg_colour){255, 255, 0, ATG_ALPHA_OPAQUE});
-			}
-			spec_which=(spec_which+1)%8;
+			specin[t%speclen]=sv;
+			t++;
 		}
-		specin[t%speclen]=sv;
 	}
-	fprintf(stderr, "\n");
+	fprintf(stderr, "\nShutting down audio subsystem\n");
+	stop_audiorx(&rxaud);
+	stop_audiotx(&txaud);
 	return(0);
 }
 
