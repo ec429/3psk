@@ -1,3 +1,13 @@
+#pragma once
+/*
+	3psk - 3-pole Phase Shift Keying
+	
+	Copyright (c) Edward Cree, 2012
+	Licensed under the GNU GPL v3+
+	
+	gui: Functions to construct the GUI
+*/
+
 #include <SDL.h>
 #include <atg.h>
 
