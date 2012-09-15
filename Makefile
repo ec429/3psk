@@ -3,7 +3,7 @@ CC := gcc
 CFLAGS := -Wall -Wextra -Werror -pedantic -std=gnu99 -g `sdl-config --cflags`
 LIBS := -lm -lfftw3 `sdl-config --libs` -lSDL_ttf -latg
 OBJS := wav.o bits.o varicode.o strbuf.o gui.o
-INCLUDES := $(OBJS:.o=.h)
+INCLUDES := $(OBJS:.o=.h) frontend.h
 
 all: 3psk
 
@@ -16,6 +16,8 @@ all: 3psk
 wav.o: bits.h
 
 varicode.o: strbuf.h
+
+gui.o: frontend.h
 
 clean:
 	-rm 3psk *.o

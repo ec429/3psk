@@ -1,14 +1,7 @@
 #include "gui.h"
 #include <atg_internals.h>
 #include "strbuf.h"
-
-const char *set_tbl_strings[6]={
-"Baud Rates",
-"BW min max",
-"10   1   7",
-"30   1  20",
-"150  4  90",
-"750 40 400"};
+#include "frontend.h"
 
 int make_gui(gui *buf, unsigned int *bws)
 {
@@ -610,7 +603,6 @@ int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsi
 }
 
 /* Data for the selector */
-const char *sel_labels[4]={"10","30","150","750"};
 atg_colour sel_colours[4]={{31, 31, 95, 0}, {95, 31, 31, 0}, {95, 95, 15, 0}, {31, 159, 31, 0}};
 
 /* Prototype for the selector renderer */
@@ -637,7 +629,9 @@ atg_element *create_selector(unsigned int *sel)
 	{
 		atg_colour fg=sel_colours[i];
 		/* Create the button */
-		atg_element *btn=atg_create_element_button(sel_labels[i], fg, (atg_colour){7, 7, 7, ATG_ALPHA_OPAQUE});
+		char str[4];
+		snprintf(str, 4, "%u", bandwidths[i]);
+		atg_element *btn=atg_create_element_button(str, fg, (atg_colour){7, 7, 7, ATG_ALPHA_OPAQUE});
 		if(!btn)
 		{
 			atg_free_element(rv);

@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
 #include <math.h>
 #include <complex.h>
 #include <fftw3.h>
@@ -19,6 +21,7 @@
 #include "varicode.h"
 #include "strbuf.h"
 #include "gui.h"
+#include "frontend.h"
 
 #define CONSLEN	1024
 #define CONSDLEN	((int)floor(CONSLEN*min(bw, 750)/750))
@@ -43,7 +46,250 @@ int main(int argc, char **argv)
 	unsigned int init_amp=10;
 	bool init_moni=true, init_afc=false;
 	unsigned int init_txb=60;
-	unsigned int bws=2; // TODO: --bws= option, and --bw= (will need a list)
+	unsigned int bws=2;
+	char init_macro[6][MACROLEN];
+	for(unsigned int i=0;i<6;i++)
+		init_macro[i][0]=0;
+	const char *conffile=NULL;
+	for(int arg=1;arg<argc;arg++)
+	{
+		if(strncmp(argv[arg], "--conf=", 7)==0)
+			conffile=argv[arg]+7;
+	}
+	FILE *conffp=NULL;
+	if(!conffile)
+	{
+	#ifdef WINDOWS
+		#error Windows default conffile not done yet
+	#else
+		const char *home=getenv("HOME");
+		if(!home)
+		{
+			perror("No $HOME; getenv");
+			return(1);
+		}
+		size_t n=strlen(home)+7;
+		char *fn=malloc(n);
+		if(!fn)
+		{
+			perror("malloc");
+			return(1);
+		}
+		snprintf(fn, n, "%s/.3psk", home);
+		conffp=fopen(fn, "r");
+		if(!conffp)
+		{
+			fprintf(stderr, "Failed to open %s: fopen: %s\n", fn, strerror(errno));
+			return(1);
+		}
+		free(fn);
+	#endif
+	}
+	else
+	{
+		conffp=fopen(conffile, "r");
+		if(!conffp)
+		{
+			fprintf(stderr, "Failed to open %s: fopen: %s\n", conffile, strerror(errno));
+			return(1);
+		}
+	}
+	while(!feof(conffp))
+	{
+		char *line=fgetl(conffp);
+		if(!line) break;
+		switch(*line)
+		{
+			case '#': // comment
+			case 0:
+			break;
+			default:
+			{
+				char *colon=strchr(line, ':');
+				if(colon) *colon++=0;
+				if((line[0]=='F')&&isdigit(line[1])&&!line[2])
+				{
+					int i=line[1]-'0'; // XXX possibly non-portable
+					if((i<1)||(i>NMACROS))
+					{
+						fprintf(stderr, "Bad item in conffile: `F%d' (only F1 to F%d are allowed)\n", i, NMACROS);
+						return(1);
+					}
+					size_t j=0;
+					while((j+1<MACROLEN)&&colon&&*colon)
+					{
+						char p=*colon++;
+						switch(p)
+						{
+							case '\\':
+								p=*colon++;
+								switch(p)
+								{
+									case 'n':
+										p='\n';
+									break;
+									case 't':
+										p='\t';
+									break;
+									case 'r':
+										p='\r';
+									break;
+								}
+							break;
+							default:
+							break;
+						}
+						init_macro[i-1][j++]=p;
+						init_macro[i-1][j]=0;
+					}
+				}
+				else if(strcmp(line, "TXF")==0)
+				{
+					if(colon)
+					{
+						if(sscanf(colon, "%u", &init_txf)!=1)
+						{
+							fprintf(stderr, "Bad TXF in conffile: %s not numeric\n", colon);
+							return(1);
+						}
+					}
+					else
+					{
+						fprintf(stderr, "Bad TXF in conffile: no argument\n");
+						return(1);
+					}
+				}
+				else if(strcmp(line, "RXF")==0)
+				{
+					if(colon)
+					{
+						if(sscanf(colon, "%lg", &rxf)!=1)
+						{
+							fprintf(stderr, "Bad RXF in conffile: %s not numeric\n", colon);
+							return(1);
+						}
+						setrxf=true;
+					}
+					else
+					{
+						fprintf(stderr, "Bad RXF in conffile: no argument\n");
+						return(1);
+					}
+				}
+				else if(strcmp(line, "TXB")==0)
+				{
+					if(colon)
+					{
+						if(sscanf(colon, "%u", &init_txb)!=1)
+						{
+							fprintf(stderr, "Bad TXB in conffile: %s not numeric\n", colon);
+							return(1);
+						}
+					}
+					else
+					{
+						fprintf(stderr, "Bad TXB in conffile: no argument\n");
+						return(1);
+					}
+				}
+				else if(strcmp(line, "RXS")==0)
+				{
+					if(colon)
+					{
+						if(sscanf(colon, "%u", &init_rxs)!=1)
+						{
+							fprintf(stderr, "Bad RXS in conffile: %s not numeric\n", colon);
+							return(1);
+						}
+					}
+					else
+					{
+						fprintf(stderr, "Bad RXS in conffile: no argument\n");
+						return(1);
+					}
+				}
+				else if(strcmp(line, "AMP")==0)
+				{
+					if(colon)
+					{
+						if(sscanf(colon, "%u", &init_amp)!=1)
+						{
+							fprintf(stderr, "Bad AMP in conffile: %s not numeric\n", colon);
+							return(1);
+						}
+					}
+					else
+					{
+						fprintf(stderr, "Bad AMP in conffile: no argument\n");
+						return(1);
+					}
+				}
+				else if(strcmp(line, "BW")==0)
+				{
+					if(colon)
+					{
+						unsigned int bw;
+						if(sscanf(colon, "%u", &bw)!=1)
+						{
+							fprintf(stderr, "Bad BW in conffile: %s not numeric\n", colon);
+							return(1);
+						}
+						unsigned int i;
+						for(i=0;i<4;i++)
+							if(bw==bandwidths[i])
+								break;
+						if(i<4)
+							bws=i;
+						else
+						{
+							fprintf(stderr, "Bad BW in conffile: invalid value %u\n", bw);
+							fprintf(stderr, "\tValid values are: %u", bandwidths[0]);
+							for(unsigned int i=1;i<4;i++)
+								fprintf(stderr, ", %u", bandwidths[i]);
+							fprintf(stderr, "\n");
+							return(1);
+						}
+					}
+					else
+					{
+						fprintf(stderr, "Bad BW in conffile: no argument\n");
+						return(1);
+					}
+				}
+				else if(strcmp(line, "IF")==0)
+				{
+					if(colon)
+					{
+						if(sscanf(colon, "%lg", &aif)!=1)
+						{
+							fprintf(stderr, "Bad IF in conffile: %s not numeric\n", colon);
+							return(1);
+						}
+					}
+					else
+					{
+						fprintf(stderr, "Bad IF in conffile: no argument\n");
+						return(1);
+					}
+				}
+				else if(strcmp(line, "MONI")==0)
+					init_moni=true;
+				else if(strcmp(line, "!MONI")==0)
+					init_moni=false;
+				else if(strcmp(line, "AFC")==0)
+					init_afc=true;
+				else if(strcmp(line, "!AFC")==0)
+					init_afc=false;
+				else
+				{
+					fprintf(stderr, "conffile: ignoring unrecognised line: %s:%s\n", line, colon);
+				}
+			}
+			break;
+		}
+		free(line);
+	}
+	fclose(conffp);
 	for(int arg=1;arg<argc;arg++)
 	{
 		if(strncmp(argv[arg], "--txf=", 6)==0)
@@ -70,6 +316,26 @@ int main(int argc, char **argv)
 		else if(strncmp(argv[arg], "--txb=", 6)==0)
 		{
 			sscanf(argv[arg]+6, "%u", &init_txb);
+		}
+		else if(strncmp(argv[arg], "--bw=", 5)==0)
+		{
+			unsigned int bw;
+			sscanf(argv[arg]+5, "%u", &bw);
+			unsigned int i;
+			for(i=0;i<4;i++)
+				if(bw==bandwidths[i])
+					break;
+			if(i<4)
+				bws=i;
+			else
+			{
+				fprintf(stderr, "Bad --bw: invalid value %u\n", bw);
+				fprintf(stderr, "\tValid values are: %u", bandwidths[0]);
+				for(unsigned int i=1;i<4;i++)
+					fprintf(stderr, ", %u", bandwidths[i]);
+				fprintf(stderr, "\n");
+				return(1);
+			}
 		}
 		else if(strcmp(argv[arg], "--moni")==0)
 		{
@@ -152,6 +418,9 @@ int main(int argc, char **argv)
 			}
 		}
 		else {fprintf(stderr, "Error: G.amp is NULL\n"); return(1);}
+		for(unsigned int i=0;i<NMACROS;i++)
+			if(G.macro[i])
+				snprintf(G.macro[i], MACROLEN, "%s", init_macro[i]);
 	}
 	
 	unsigned int inp=NMACROS;
@@ -170,7 +439,7 @@ int main(int argc, char **argv)
 	}
 	
 	fprintf(stderr, "frontend: Audio sample rate: %lu Hz\n", (unsigned long)w.sample_rate);
-	unsigned long blklen=floor(w.sample_rate/150.0);
+	unsigned long blklen=floor(w.sample_rate/(double)bandwidths[bws]);
 	double bw=w.sample_rate/(double)blklen;
 	
 	fprintf(stderr, "frontend: FFT block length: %lu samples\n", blklen);
@@ -183,8 +452,8 @@ int main(int argc, char **argv)
 	unsigned long k = max(floor((aif * (double)blklen / (double)w.sample_rate)+0.5), 1);
 	double truif=(k*w.sample_rate/(double)blklen);
 	fprintf(stderr, "frontend: Actual IF: %g Hz\n", truif);
-	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/10.0));
-	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/10.0));
+	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/(double)bandwidths[0]));
+	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*floor(w.sample_rate/(double)bandwidths[0]));
 	unsigned long speclen=max(floor(w.sample_rate/5.0), 360), spechalf=(speclen>>1)+1;
 	double spec_hpp=w.sample_rate/(double)speclen;
 	double *specin=fftw_malloc(sizeof(double)*speclen);
@@ -192,10 +461,8 @@ int main(int argc, char **argv)
 	fftw_set_timelimit(2.0);
 	fprintf(stderr, "frontend: Preparing FFT plans\n");
 	fftw_plan p[4], sp_p;
-	p[0]=fftw_plan_dft_1d(floor(w.sample_rate/10.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
-	p[1]=fftw_plan_dft_1d(floor(w.sample_rate/30.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
-	p[2]=fftw_plan_dft_1d(floor(w.sample_rate/150.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
-	p[3]=fftw_plan_dft_1d(floor(w.sample_rate/750.0), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
+	for(unsigned int i=0;i<4;i++)
+		p[i]=fftw_plan_dft_1d(floor(w.sample_rate/(double)bandwidths[i]), fftin, fftout, FFTW_FORWARD, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	sp_p=fftw_plan_dft_r2c_1d(speclen, specin, specout, FFTW_DESTROY_INPUT|FFTW_PATIENT);
 	fprintf(stderr, "frontend: Ready\n");
 	long wzero=zeroval(w);
@@ -563,7 +830,7 @@ int main(int argc, char **argv)
 							{
 								if(value.e==G.bw)
 								{
-									bw=(double[4]){10, 30, 150, 750}[value.value];
+									bw=bandwidths[value.value];
 									blklen=floor(w.sample_rate/bw);
 									bw=w.sample_rate/(double)blklen;
 									fprintf(stderr, "frontend: new FFT block length: %lu samples\n", blklen);

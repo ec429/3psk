@@ -1,0 +1,29 @@
+# A sample .3psk file.  Install to $HOME/.3psk and edit to suit your needs
+
+# Macros (F1-F6)
+F1:CQ CQ DE {mycall} {mycall}\n\r
+F2:QRZ DE {mycall}\n\r
+F3:{hiscall} DE {mycall}\n\r
+F4:{hiscall} UR {rst} {exch}\n\r
+F5:TU ES 73 DE {mycall}\n\r
+F6:RYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRYRY {mycall}\n\r
+
+# Default settings
+#  Centre (audio) frequency, Hz
+TXF:440
+#  Receive frequency (if omitted, defaults to TXF)
+#RXF:440
+#  Transmit baud rate
+TXB:60
+#  Receiver sensitivity parameter
+RXS:28
+#  Receive gain
+AMP:10
+#  Approximate IF, Hz
+#IF:7000
+#  Receive bandwidth, Hz (from {10, 50, 150, 750})
+BW:150
+#  Enable monitor
+MONI
+#  Disable automatic frequency control
+!AFC
