@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 						return(1);
 					}
 					size_t j=0;
-					while((j+1<MACROLEN)&&colon&&*colon)
+					while((j<MACROLEN)&&colon&&*colon)
 					{
 						char p=*colon++;
 						switch(p)

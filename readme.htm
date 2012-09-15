@@ -16,6 +16,7 @@
 <li><a href="#foreword">Foreword</a></li>
 <li><a href="#controls">Controls</a></li>
 <li><a href="#hotkeys">Hotkeys</a></li>
+<li><a href="#config">Configuration</a></li>
 <li><a href="#depends">Dependencies</a></li>
 </ul>
 </div><!--#contents-->
@@ -56,6 +57,67 @@
 		This can also be done with Ctrl-M.</dd>
 </dl>
 </div><!--#hotkeys-->
+<div id="config">
+<h2>Configuration</h2>
+<p><tt>3psk</tt> can be configured through the <em>conffile</em> or through command-line options.</p>
+<h3><em>Conffile</em></h3>
+<p>The conffile is located at <tt>~/.3psk</tt> on Linux, or <tt>3psk.conf</tt> on Windows.  It consists of <tt>boolean</tt> items, <tt>name:value</tt> pairs, and comments (lines beginning with '<strong>#</strong>').  A different conffile can be loaded instead by specifying the <tt>--conf=<em>file</em></tt> option on the command-line.</p>
+<p>A sample conffile is provided as <tt>sample.conf</tt>.</p>
+<p>The <tt>boolean</tt> items are:</p>
+<dl>
+	<dd>MONI</dd>
+		<dt>Enables the monitor</dt>
+	<dd>AFC</dd>
+		<dt>Enables Automatic Frequency Control</dt>
+</dl>
+<p>Prefixing any <tt>boolean</tt> with an exclamation mark '<strong>!</strong>' disables it.</p>
+<p>The <tt>name</tt>s are:</p>
+<dl>
+	<dd>F1 to F6</dd>
+		<dt>Default text for the macros.  The escapes <tt>\n</tt>, <tt>\t</tt> and <tt>\r</tt> are expanded to newline, tab, and the 'stop transmitting' marker.  The macros are truncated to 80 characters.</dt>
+	<dd>TXF</dd>
+		<dt>Transmit frequency, in Hz.</dt>
+	<dd>RXF</dd>
+		<dt>Receive frequency, in Hz.  If not set, defaults to TXF.</dt>
+	<dd>TXB</dd>
+		<dt>Transmit Baud rate.</dt>
+	<dd>RXS</dd>
+		<dt>Receiver Sensitivity parameter.</dt>
+	<dd>AMP</dd>
+		<dt>Receive gain.</dt>
+	<dd>IF</dd>
+		<dt>Approximate <acronym title="Intermediate Frequency">IF</acronym>, in Hz.</dt>
+	<dd>BW</dd>
+		<dt>Receive filter bandwidth, Hz.  Must be one of 10, 50, 150, 750.</dt>
+</dl>
+<h3>Command-line options</h3>
+<dl>
+	<dd><tt>--conf=<em>file</em></tt></dd>
+		<dt>Uses <em>file</em> instead of the default conffile.</dt>
+	<dd><tt>--txf=<em>freq</em></tt></dd>
+		<dt>Transmit frequency is <em>freq</em> Hz.</dt>
+	<dd><tt>--rxf=<em>freq</em></tt></dd>
+		<dt>Receive frequency is <em>freq</em> Hz.</dt>
+	<dd><tt>--txb=<em>bauds</em></tt></dd>
+		<dt>Transmit baud rate is <em>bauds</em>.</dt>
+	<dd><tt>--rxs=<em>sens</em></tt></dd>
+		<dt>Receiver Sensitivity parameter is <em>sens</em>.</dt>
+	<dd><tt>--amp=<em>gain</em></tt></dd>
+		<dt>Receive gain is <em>gain</em>.</dt>
+	<dd><tt>--if=<em>freq</em></tt></dd>
+		<dt><acronym title="Intermediate Frequency">IF</acronym> is approximately <em>freq</em> Hz.</dt>
+	<dd><tt>--bw=<em>width</em></tt></dd>
+		<dt>Receive filter bandwidth is <em>width</em> Hz.  Must be one of 10, 50, 150, 750.</dt>
+	<dd><tt>--moni</tt></dd>
+		<dt>Enables the monitor.</dt>
+	<dd><tt>--no-moni</tt></dd>
+		<dt>Disables the monitor.</dt>
+	<dd><tt>--afc</tt></dd>
+		<dt>Enables Automatic Frequency Control.</dt>
+	<dd><tt>--no-afc</tt></dd>
+		<dt>Disables Automatic Frequency Control.</dt>
+</dl>
+</div><!--#config-->
 <div id="depends">
 <h2>Dependencies</h2>
 <p>In order to compile and run <tt>3psk</tt>, you will need:</p>
