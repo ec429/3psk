@@ -1,0 +1,25 @@
+# Makefile for 3psk, 3-pole Phase Shift Keying
+CC := i586-mingw32msvc-gcc
+CFLAGS := -Wall -Wextra -Werror --std=gnu99 -g -L. `/usr/i586-mingw32msvc/bin/sdl-config --cflags` -Wfatal-errors
+CPPFLAGS := -DWINDOWS
+LIBS := -lm -lfftw3-3 `/usr/i586-mingw32msvc/bin/sdl-config --libs` -lSDL_ttf -lSDL_audioin -latg
+OBJS := bits.dll varicode.dll strbuf.dll gui.dll audio.dll
+INCLUDES := $(OBJS:.dll=.h) frontend.h
+VERSION := `git describe --tags`
+
+all: 3psk.exe
+
+3psk.exe: 3psk.c $(INCLUDES) $(OBJS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $< $(LDFLAGS) $(LIBS) $(OBJS) -o $@
+
+%.dll: %.c %.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+varicode.dll: strbuf.h
+
+gui.dll: frontend.h
+
+audio.dll: bits.h
+
+clean:
+	-rm 3psk.exe *.dll

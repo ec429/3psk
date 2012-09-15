@@ -14,7 +14,11 @@
 #include <SDL/SDL_audioin.h>
 
 #include <unistd.h>
+#ifdef WINDOWS
+#define SLEEP	Sleep(5)
+#else
 #define SLEEP	usleep(5e3)
+#endif
 
 #include "bits.h"
 

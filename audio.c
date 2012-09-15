@@ -8,6 +8,10 @@
 */
 
 #include "audio.h"
+#ifdef WINDOWS
+#include <windef.h>
+#include <winbase.h>
+#endif
 
 int init_audiorx(audiobuf *a)
 {
