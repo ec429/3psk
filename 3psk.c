@@ -57,11 +57,12 @@ int main(int argc, char **argv)
 			conffile=argv[arg]+7;
 	}
 	FILE *conffp=NULL;
+	#ifdef WINDOWS
+	if(!conffile)
+		conffile="3psk.conf";
+	#else
 	if(!conffile)
 	{
-	#ifdef WINDOWS
-		#error Windows default conffile not done yet
-	#else
 		const char *home=getenv("HOME");
 		if(!home)
 		{
@@ -83,9 +84,9 @@ int main(int argc, char **argv)
 			return(1);
 		}
 		free(fn);
-	#endif
 	}
 	else
+	#endif
 	{
 		conffp=fopen(conffile, "r");
 		if(!conffp)
