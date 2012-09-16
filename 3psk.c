@@ -92,205 +92,216 @@ int main(int argc, char **argv)
 		if(!conffp)
 		{
 			fprintf(stderr, "Failed to open %s: fopen: %s\n", conffile, strerror(errno));
-			return(1);
 		}
 	}
-	while(!feof(conffp))
+	if(conffp)
 	{
-		char *line=fgetl(conffp);
-		if(!line) break;
-		switch(*line)
+		while(!feof(conffp))
 		{
-			case '#': // comment
-			case 0:
-			break;
-			default:
+			char *line=fgetl(conffp);
+			if(!line) break;
+			switch(*line)
 			{
-				char *colon=strchr(line, ':');
-				if(colon) *colon++=0;
-				if((line[0]=='F')&&isdigit(line[1])&&!line[2])
+				case '#': // comment
+				case 0:
+				break;
+				default:
 				{
-					int i=line[1]-'0'; // XXX possibly non-portable
-					if((i<1)||(i>NMACROS))
+					char *colon=strchr(line, ':');
+					if(colon) *colon++=0;
+					if((line[0]=='F')&&isdigit(line[1])&&!line[2])
 					{
-						fprintf(stderr, "Bad item in conffile: `F%d' (only F1 to F%d are allowed)\n", i, NMACROS);
-						return(1);
-					}
-					size_t j=0;
-					while((j<MACROLEN)&&colon&&*colon)
-					{
-						char p=*colon++;
-						switch(p)
+						int i=line[1]-'0'; // XXX possibly non-portable
+						if((i<1)||(i>NMACROS))
 						{
-							case '\\':
-								p=*colon++;
-								switch(p)
-								{
-									case 'n':
-										p='\n';
-									break;
-									case 't':
-										p='\t';
-									break;
-									case 'r':
-										p='\r';
-									break;
-								}
-							break;
-							default:
-							break;
-						}
-						init_macro[i-1][j++]=p;
-						init_macro[i-1][j]=0;
-					}
-				}
-				else if(strcmp(line, "TXF")==0)
-				{
-					if(colon)
-					{
-						if(sscanf(colon, "%u", &init_txf)!=1)
-						{
-							fprintf(stderr, "Bad TXF in conffile: %s not numeric\n", colon);
+							fprintf(stderr, "Bad item in conffile: `F%d' (only F1 to F%d are allowed)\n", i, NMACROS);
 							return(1);
 						}
-					}
-					else
-					{
-						fprintf(stderr, "Bad TXF in conffile: no argument\n");
-						return(1);
-					}
-				}
-				else if(strcmp(line, "RXF")==0)
-				{
-					if(colon)
-					{
-						if(sscanf(colon, "%lg", &rxf)!=1)
+						size_t j=0;
+						while((j<MACROLEN)&&colon&&*colon)
 						{
-							fprintf(stderr, "Bad RXF in conffile: %s not numeric\n", colon);
-							return(1);
-						}
-						setrxf=true;
-					}
-					else
-					{
-						fprintf(stderr, "Bad RXF in conffile: no argument\n");
-						return(1);
-					}
-				}
-				else if(strcmp(line, "TXB")==0)
-				{
-					if(colon)
-					{
-						if(sscanf(colon, "%u", &init_txb)!=1)
-						{
-							fprintf(stderr, "Bad TXB in conffile: %s not numeric\n", colon);
-							return(1);
-						}
-					}
-					else
-					{
-						fprintf(stderr, "Bad TXB in conffile: no argument\n");
-						return(1);
-					}
-				}
-				else if(strcmp(line, "RXS")==0)
-				{
-					if(colon)
-					{
-						if(sscanf(colon, "%u", &init_rxs)!=1)
-						{
-							fprintf(stderr, "Bad RXS in conffile: %s not numeric\n", colon);
-							return(1);
-						}
-					}
-					else
-					{
-						fprintf(stderr, "Bad RXS in conffile: no argument\n");
-						return(1);
-					}
-				}
-				else if(strcmp(line, "AMP")==0)
-				{
-					if(colon)
-					{
-						if(sscanf(colon, "%u", &init_amp)!=1)
-						{
-							fprintf(stderr, "Bad AMP in conffile: %s not numeric\n", colon);
-							return(1);
-						}
-					}
-					else
-					{
-						fprintf(stderr, "Bad AMP in conffile: no argument\n");
-						return(1);
-					}
-				}
-				else if(strcmp(line, "BW")==0)
-				{
-					if(colon)
-					{
-						unsigned int bw;
-						if(sscanf(colon, "%u", &bw)!=1)
-						{
-							fprintf(stderr, "Bad BW in conffile: %s not numeric\n", colon);
-							return(1);
-						}
-						unsigned int i;
-						for(i=0;i<4;i++)
-							if(bw==bandwidths[i])
+							char p=*colon++;
+							switch(p)
+							{
+								case '\\':
+									p=*colon++;
+									switch(p)
+									{
+										case 'n':
+											p='\n';
+										break;
+										case 't':
+											p='\t';
+										break;
+										case 'r':
+											p='\r';
+										break;
+									}
 								break;
-						if(i<4)
-							bws=i;
+								default:
+								break;
+							}
+							init_macro[i-1][j++]=p;
+							init_macro[i-1][j]=0;
+						}
+					}
+					else if(strcmp(line, "TXF")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%u", &init_txf)!=1)
+							{
+								fprintf(stderr, "Bad TXF in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
 						else
 						{
-							fprintf(stderr, "Bad BW in conffile: invalid value %u\n", bw);
-							fprintf(stderr, "\tValid values are: %u", bandwidths[0]);
-							for(unsigned int i=1;i<4;i++)
-								fprintf(stderr, ", %u", bandwidths[i]);
-							fprintf(stderr, "\n");
+							fprintf(stderr, "Bad TXF in conffile: no argument\n");
 							return(1);
 						}
 					}
-					else
+					else if(strcmp(line, "RXF")==0)
 					{
-						fprintf(stderr, "Bad BW in conffile: no argument\n");
-						return(1);
-					}
-				}
-				else if(strcmp(line, "IF")==0)
-				{
-					if(colon)
-					{
-						if(sscanf(colon, "%lg", &aif)!=1)
+						if(colon)
 						{
-							fprintf(stderr, "Bad IF in conffile: %s not numeric\n", colon);
+							if(sscanf(colon, "%lg", &rxf)!=1)
+							{
+								fprintf(stderr, "Bad RXF in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+							setrxf=true;
+						}
+						else
+						{
+							fprintf(stderr, "Bad RXF in conffile: no argument\n");
 							return(1);
 						}
 					}
+					else if(strcmp(line, "TXB")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%u", &init_txb)!=1)
+							{
+								fprintf(stderr, "Bad TXB in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad TXB in conffile: no argument\n");
+							return(1);
+						}
+					}
+					else if(strcmp(line, "RXS")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%u", &init_rxs)!=1)
+							{
+								fprintf(stderr, "Bad RXS in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad RXS in conffile: no argument\n");
+							return(1);
+						}
+					}
+					else if(strcmp(line, "AMP")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%u", &init_amp)!=1)
+							{
+								fprintf(stderr, "Bad AMP in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad AMP in conffile: no argument\n");
+							return(1);
+						}
+					}
+					else if(strcmp(line, "BW")==0)
+					{
+						if(colon)
+						{
+							unsigned int bw;
+							if(sscanf(colon, "%u", &bw)!=1)
+							{
+								fprintf(stderr, "Bad BW in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+							unsigned int i;
+							for(i=0;i<4;i++)
+								if(bw==bandwidths[i])
+									break;
+							if(i<4)
+								bws=i;
+							else
+							{
+								fprintf(stderr, "Bad BW in conffile: invalid value %u\n", bw);
+								fprintf(stderr, "\tValid values are: %u", bandwidths[0]);
+								for(unsigned int i=1;i<4;i++)
+									fprintf(stderr, ", %u", bandwidths[i]);
+								fprintf(stderr, "\n");
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad BW in conffile: no argument\n");
+							return(1);
+						}
+					}
+					else if(strcmp(line, "IF")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%lg", &aif)!=1)
+							{
+								fprintf(stderr, "Bad IF in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad IF in conffile: no argument\n");
+							return(1);
+						}
+					}
+					else if(strcmp(line, "MONI")==0)
+						init_moni=true;
+					else if(strcmp(line, "!MONI")==0)
+						init_moni=false;
+					else if(strcmp(line, "AFC")==0)
+						init_afc=true;
+					else if(strcmp(line, "!AFC")==0)
+						init_afc=false;
 					else
 					{
-						fprintf(stderr, "Bad IF in conffile: no argument\n");
-						return(1);
+						fprintf(stderr, "conffile: ignoring unrecognised line: %s:%s\n", line, colon);
 					}
 				}
-				else if(strcmp(line, "MONI")==0)
-					init_moni=true;
-				else if(strcmp(line, "!MONI")==0)
-					init_moni=false;
-				else if(strcmp(line, "AFC")==0)
-					init_afc=true;
-				else if(strcmp(line, "!AFC")==0)
-					init_afc=false;
-				else
-				{
-					fprintf(stderr, "conffile: ignoring unrecognised line: %s:%s\n", line, colon);
-				}
+				break;
 			}
-			break;
+			free(line);
 		}
-		free(line);
+		fclose(conffp);
 	}
-	fclose(conffp);
+	else
+	{
+		fprintf(stderr, "No conffile.  Install one at ");
+#ifdef WINDOWS
+		fprintf(stderr, "3psk.conf\n");
+#else // !WINDOWS
+		fprintf(stderr, "~/.3psk\n");
+#endif // WINDOWS
+	}
 	for(int arg=1;arg<argc;arg++)
 	{
 		if(strncmp(argv[arg], "--txf=", 6)==0)
@@ -505,449 +516,87 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Starting main loop\n");
 	while(!errupt)
 	{
-		if(!(t%blklen))
-		{
-			fftw_execute(p[bws]);
-			int x,y;
-			ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
-			if(lined[frame%CONSDLEN]) line(G.constel_img, x, y, 60, 60, CONS_BG);
-			pset(G.constel_img, x, y, CONS_BG);
-			fftw_complex half=points[(frame+(CONSDLEN>>1))%CONSDLEN];
-			ztoxy(half, gsf, &x, &y);
-			atg_colour c=(cabs(half)>sens)?(atg_colour){0, 127, 0, ATG_ALPHA_OPAQUE}:(atg_colour){127, 0, 0, ATG_ALPHA_OPAQUE};
-			if(lined[(frame+(CONSDLEN>>1))%CONSDLEN]) line(G.constel_img, x, y, 60, 60, (atg_colour){0, 95, 95, ATG_ALPHA_OPAQUE});
-			pset(G.constel_img, x, y, c);
-			ztoxy(points[frame%CONSDLEN]=fftout[k], gsf, &x, &y);
-			bool green=cabs(fftout[k])>sens;
-			bool enough=false;
-			double da=0;
-			if(cabs(lastsym)>sens)
-				enough=(fabs(da=carg(fftout[k]/lastsym))>(fch?M_PI*2/3.0:M_PI/2));
-			else
-				enough=true;
-			fftw_complex dz=bws?fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN]:fftout[k]/points[(frame+CONSDLEN-1)%CONSDLEN];
-			bool spd=bws?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e2));
-			if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
-			{
-				line(G.constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
-				line(G.phasing_img, 0, 60, G.phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
-				int py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
-				line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, PHAS_BG);
-				old_da[da_ptr]=(da<0)?da+M_PI*4/3.0:da;
-				t_da+=old_da[da_ptr]-M_PI*2/3.0;
-				py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
-				line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
-				unsigned int dt=t-symtime[st_ptr];
-				double baud=rxaud.srate*(st_loop?PHASLEN:st_ptr)/(double)dt;
-				snprintf(G.bauds, 8, "RXB %03d", (int)floor(baud+.5));
-				symtime[st_ptr]=t;
-				st_ptr=(st_ptr+1)%PHASLEN;
-				if(!st_ptr) st_loop=true;
-				da_ptr=(da_ptr+1)%PHASLEN;
-				if(G.afc&&*G.afc&&!da_ptr)
-				{
-					double ch=(t_da/(double)PHASLEN)*10.0;
-					if(fabs(ch)>0.5)
-					{
-						rxf+=ch;
-						setspinval(G.rxf, floor(rxf+.5));
-						fch=true;
-					}
-					t_da=0;
-				}
-				lastsym=fftout[k];
-				if(bitbufp>=BITBUFLEN)
-				{
-					bitbufp--;
-					for(unsigned int i=0;i<bitbufp;i++)
-						bitbuf[i]=bitbuf[i+1];
-				}
-				bitbuf[bitbufp++]=(da>0);
-				int ubits=0;
-				char *text=decode((bbuf){.nbits=bitbufp, .data=bitbuf}, &ubits);
-				if(*text)
-				{
-					size_t tp=strlen(G.outtext[OUTLINES-1]);
-					for(const char *p=text;*p;p++)
-					{
-						if((*p=='\n')||(tp>OUTLINELEN))
-						{
-							for(unsigned int i=0;i<OUTLINES-1;i++)
-								strcpy(G.outtext[i], G.outtext[i+1]);
-							G.outtext[OUTLINES-1][0]=' ';
-							G.outtext[OUTLINES-1][1]=0;
-							tp=1;
-						}
-						if(*p=='\t')
-						{
-							G.outtext[OUTLINES-1][tp++]=' ';
-							while((tp<OUTLINELEN)&&((tp-1)&3))
-								G.outtext[OUTLINES-1][tp++]=' ';
-							G.outtext[OUTLINES-1][tp]=0;
-						}
-						else if(*p!='\n')
-						{
-							G.outtext[OUTLINES-1][tp++]=*p;
-							G.outtext[OUTLINES-1][tp]=0;
-						}
-					}
-				}
-				bitbufp-=ubits;
-				for(unsigned int i=0;i<bitbufp;i++)
-					bitbuf[i]=bitbuf[i+ubits];
-				free(text);
-			}
-			fch=false;
-			pset(G.constel_img, x, y, green?(atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE}:(atg_colour){255, 0, 0, ATG_ALPHA_OPAQUE});
-			frame++;
-			if(t>lastflip)
-			{
-				lastflip+=SAMPLE_RATE/8;
-				if(G.spl) *G.spl=(rxf!=txf(G));
-				if(G.ingi>((INLINES+1)*INLINELEN))
-				{
-					G.ingi-=INLINELEN;
-					memmove(G.ing, G.ing+INLINELEN, G.ingi);
-				}
-				for(unsigned int i=0;i<INLINES;i++)
-					G.intextleft[i][0]=G.intextright[i][0]=0;
-				unsigned int x=0,y=0;
-				for(size_t p=0;p<G.ingi;p++)
-				{
-					G.intextleft[y][x++]=G.ing[p];
-					G.intextleft[y][x]=0;
-					if((G.ing[p]=='\n')||(x>=INLINELEN))
-					{
-						if(y<INLINES-1)
-							y++;
-						else
-						{
-							for(unsigned int i=0;i<y;i++)
-								strcpy(G.intextleft[i], G.intextleft[i+1]);
-							G.intextleft[y][0]=0;
-						}
-						x=0;
-					}
-				}
-				unsigned int sx=0;
-				for(size_t p=0;p<G.inri;p++)
-				{
-					x++;
-					G.intextright[y][sx++]=G.inr[p];
-					G.intextright[y][sx]=0;
-					if((G.inr[p]=='\n')||(x>=INLINELEN))
-					{
-						if(y<INLINES-1)
-							y++;
-						else
-						{
-							for(unsigned int i=0;i<y;i++)
-							{
-								strcpy(G.intextleft[i], G.intextleft[i+1]);
-								strcpy(G.intextright[i], G.intextright[i+1]);
-							}
-							G.intextleft[y][0]=G.intextright[y][0]=0;
-						}
-						x=sx=0;
-					}
-				}
-				for(unsigned int i=0;i<NMACROS;i++)
-					*G.mcol[i]=(i==inp)?(atg_colour){63, 63, 47, ATG_ALPHA_OPAQUE}:(atg_colour){23, 23, 23, ATG_ALPHA_OPAQUE};
-				atg_flip(G.canvas);
-				atg_event e;
-				while(atg_poll_event(&e, G.canvas))
-				{
-					switch(e.type)
-					{
-						case ATG_EV_RAW:;
-							SDL_Event s=e.event.raw;
-							switch(s.type)
-							{
-								case SDL_QUIT:
-									errupt=1;
-								break;
-								case SDL_KEYDOWN:
-									switch(s.key.keysym.sym)
-									{
-										case SDLK_F1:
-											append_str(&G.inr, &G.inrl, &G.inri, G.macro[0]);
-											txstart(8);
-										break;
-										case SDLK_F2:
-											append_str(&G.inr, &G.inrl, &G.inri, G.macro[1]);
-											txstart(8);
-										break;
-										case SDLK_F3:
-											append_str(&G.inr, &G.inrl, &G.inri, G.macro[2]);
-											txstart(8);
-										break;
-										case SDLK_F4:
-											append_str(&G.inr, &G.inrl, &G.inri, G.macro[3]);
-											txstart(8);
-										break;
-										case SDLK_F5:
-											append_str(&G.inr, &G.inrl, &G.inri, G.macro[4]);
-											txstart(8);
-										break;
-										case SDLK_F6:
-											append_str(&G.inr, &G.inrl, &G.inri, G.macro[5]);
-											txstart(8);
-										break;
-										case SDLK_F7:
-											txstart(8);
-										break;
-										case SDLK_F8:
-											if(G.tx) *G.tx=false;
-											txlead=max(txb(G)/2, 8);
-										break;
-										case SDLK_ESCAPE:
-											if(G.tx) *G.tx=false;
-											txlead=0;
-											G.inri=0;
-										break;
-										case SDLK_F9:
-											rxf=txf(G);
-											setspinval(G.rxf, floor(rxf+.5));
-										break;
-										case SDLK_BACKSPACE:
-										{
-											if(inp>=NMACROS)
-											{
-												if(G.inri) G.inr[--G.inri]=0;
-											}
-											else
-											{
-												size_t l=strlen(G.macro[inp]);
-												if(l) G.macro[inp][l-1]=0;
-											}
-										}
-										break;
-										case SDLK_RETURN:
-											if(inp>=NMACROS)
-												append_char(&G.inr, &G.inrl, &G.inri, '\n');
-											else
-											{
-												size_t l=strlen(G.macro[inp]);
-												if(l<MACROLEN-1)
-												{
-													G.macro[inp][l++]='\n';
-													G.macro[inp][l]=0;
-												}
-											}
-										break;
-										case SDLK_KP_ENTER:
-											if(inp>=NMACROS)
-												append_char(&G.inr, &G.inrl, &G.inri, '\r');
-											else
-											{
-												size_t l=strlen(G.macro[inp]);
-												if(l<MACROLEN-1)
-												{
-													G.macro[inp][l++]='\r';
-													G.macro[inp][l]=0;
-												}
-											}
-										break;
-										default:
-											if((s.key.keysym.unicode&0xFF80)==0)
-											{
-												char what=s.key.keysym.unicode&0x7F;
-												if(what)
-												{
-													if(inp>=NMACROS)
-														append_char(&G.inr, &G.inrl, &G.inri, what);
-													else
-													{
-														size_t l=strlen(G.macro[inp]);
-														if(l<MACROLEN-1)
-														{
-															G.macro[inp][l++]=what;
-															G.macro[inp][l]=0;
-														}
-													}
-												}
-											}
-										break;
-									}
-								break;
-							}
-						break;
-						case ATG_EV_CLICK:;
-							atg_ev_click click=e.event.click;
-							if(!click.e)
-								fprintf(stderr, "click.e==NULL\n");
-							else if(click.e->userdata)
-							{
-								if(strcmp(click.e->userdata, "SPEC")==0)
-								{
-									switch(click.button)
-									{
-										case ATG_MB_LEFT:
-											setspinval(G.txf, min(max((click.pos.x+20)*spec_hpp, 200), 800));
-											/* fallthrough */
-										case ATG_MB_RIGHT:
-											rxf=min(max((click.pos.x+20)*spec_hpp, 200), 800);
-											setspinval(G.rxf, floor(rxf+.5));
-										break;
-										default:
-											// ignore
-										break;
-									}
-								}
-							}
-							else
-							{
-								for(unsigned int i=0;i<NMACROS;i++)
-									if(click.e==G.mline[i]) inp=(inp==i)?NMACROS:i;
-							}
-						break;
-						case ATG_EV_TRIGGER:;
-							atg_ev_trigger trigger=e.event.trigger;
-							if(!trigger.e)
-							{
-								fprintf(stderr, "trigger.e==NULL\n");
-							}
-							else
-								fprintf(stderr, "Clicked on unknown button!\n");
-						break;
-						case ATG_EV_VALUE:;
-							atg_ev_value value=e.event.value;
-							if(value.e)
-							{
-								if(value.e==G.bw)
-								{
-									bw=bandwidths[value.value];
-									blklen=floor(rxaud.srate/bw);
-									bw=rxaud.srate/(double)blklen;
-									fprintf(stderr, "frontend: new FFT block length: %lu samples\n", blklen);
-									if(blklen>4095)
-									{
-										fprintf(stderr, "frontend: new FFT block length too long.  Exiting\n");
-										return(1);
-									}
-									fprintf(stderr, "frontend: new filter bandwidth is %g Hz\n", bw);
-									k=max(floor((aif * (double)blklen / (double)rxaud.srate)+0.5), 1);
-									truif=(k*rxaud.srate/(double)blklen);
-									fprintf(stderr, "frontend: new Actual IF: %g Hz\n", truif);
-									gsf=250.0/(double)blklen;
-									sens=(double)blklen/16.0;
-									SDL_FillRect(G.constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(G.constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
-									for(size_t i=0;i<CONSLEN;i++)
-									{
-										points[i]=0;
-										lined[i]=false;
-									}
-									fprintf(stderr, "frontend: all ready to go with new bandwidth\n");
-								}
-								else if(value.e->userdata)
-								{
-									if(strcmp((const char *)value.e->userdata, "TXF")==0)
-									{
-										if(G.spl&&!*G.spl)
-											setspinval(G.rxf, rxf=value.value);
-									}
-									else if(strcmp((const char *)value.e->userdata, "RXF")==0)
-									{
-										rxf=value.value;
-									}
-								}
-							}
-						break;
-						case ATG_EV_TOGGLE:;
-							atg_ev_toggle toggle=e.event.toggle;
-							if(toggle.e)
-							{
-								if(toggle.e->userdata)
-								{
-									if(strcmp((const char *)toggle.e->userdata, "TX")==0)
-										txlead=max(txb(G)/((G.tx&&*G.tx)?1:2), 8);
-									else if(strcmp((const char *)toggle.e->userdata, "SPL")==0)
-									{
-										if(!toggle.state)
-											setspinval(G.rxf, rxf=txf(G));
-									}
-								}
-							}
-						break;
-						default:
-						break;
-					}
-				}
-			}
-		}
 		int16_t si;
-		bool havesi=!rxsample(&rxaud, &si);
-		if((G.tx&&*G.tx)||txlead)
+		bool havesi=false;
+		if(G.moni&&*G.moni&&((G.tx&&*G.tx)||txlead))
+			rxsample(&rxaud, NULL);
+		else
+			havesi=!rxsample(&rxaud, &si);
+		bool havetx=cantx(&txaud);
+		if(havetx)
 		{
-			if((int)((txt*txb(G))%txaud.srate)<txb(G))
+			if((G.tx&&*G.tx)||txlead)
 			{
-				if(txlead)
+				if((int)((txt*txb(G))%txaud.srate)<txb(G))
 				{
-					txlead--;
-					txsetp=(txsetp+2)%3;
-				}
-				else
-				{
-					if(!txbits.data) txbits.nbits=0;
-					if(G.inr&&G.inri&&!txbits.nbits)
+					if(txlead)
 					{
-						free(txbits.data);
-						const char buf[2]={G.inr[0], 0};
-						if(*buf=='\r')
-						{
-							*G.tx=false;
-							txlead=max(txb(G)/2, 8);
-							txbits=(bbuf){0, NULL};
-						}
-						else
-							txbits=encode(buf);
-						append_char(&G.ing, &G.ingl, &G.ingi, *buf);
-						G.inri--;
-						for(size_t i=0;i<G.inri;i++)
-							G.inr[i]=G.inr[i+1];
-					}
-					if(txbits.nbits)
-					{
-						bool b=*txbits.data;
-						txbits.nbits--;
-						for(size_t i=0;i<txbits.nbits;i++)
-							txbits.data[i]=txbits.data[i+1];
-						txsetp=(txsetp+(b?1:2))%3;
+						txlead--;
+						txsetp=(txsetp+2)%3;
 					}
 					else
 					{
-						txsetp=(txsetp+2)%3;
+						if(!txbits.data) txbits.nbits=0;
+						if(G.inr&&G.inri&&!txbits.nbits)
+						{
+							free(txbits.data);
+							const char buf[2]={G.inr[0], 0};
+							if(*buf=='\r')
+							{
+								*G.tx=false;
+								txlead=max(txb(G)/2, 8);
+								txbits=(bbuf){0, NULL};
+							}
+							else
+								txbits=encode(buf);
+							append_char(&G.ing, &G.ingl, &G.ingi, *buf);
+							G.inri--;
+							for(size_t i=0;i<G.inri;i++)
+								G.inr[i]=G.inr[i+1];
+						}
+						if(txbits.nbits)
+						{
+							bool b=*txbits.data;
+							txbits.nbits--;
+							for(size_t i=0;i<txbits.nbits;i++)
+								txbits.data[i]=txbits.data[i+1];
+							txsetp=(txsetp+(b?1:2))%3;
+						}
+						else
+						{
+							txsetp=(txsetp+2)%3;
+						}
 					}
 				}
+				double sweep=txb(G)*M_PI*1.5/(double)rxaud.srate;
+				double txaim=txsetp*M_PI*2/3.0;
+				if((txphi>txaim-M_PI)&&(txphi<=txaim))
+					txphi=min(txphi+sweep, txaim);
+				else if(txphi>txaim+M_PI)
+					txphi=fmod(txphi+sweep, M_PI*2);
+				else if(txphi<=txaim-M_PI)
+					txphi=fmod(txphi+M_PI*2-sweep, M_PI*2);
+				else if((txphi>txaim)&&(txphi<=txaim+M_PI))
+					txphi=max(txphi-sweep, txaim);
+				else
+				{
+					fprintf(stderr, "Impossible txphi/aim relationship!\n");
+					txphi=txaim;
+				}
+				double txmag=cos(M_PI/3)/cos(fmod(txphi, M_PI*2/3.0)-M_PI/3.0);
+				double ft=txt*2*M_PI*txf(G)/txaud.srate;
+				double tx=cos(ft+txphi)*txmag/3.0;
+				txsample(&txaud, tx*(1<<16)*.8);
+				txt++;
+				if(G.moni&&*G.moni)
+				{
+					si=tx*(1<<16)*.6;
+					havesi=true;
+				}
 			}
-			double sweep=txb(G)*M_PI*1.5/(double)rxaud.srate;
-			double txaim=txsetp*M_PI*2/3.0;
-			if((txphi>txaim-M_PI)&&(txphi<=txaim))
-				txphi=min(txphi+sweep, txaim);
-			else if(txphi>txaim+M_PI)
-				txphi=fmod(txphi+sweep, M_PI*2);
-			else if(txphi<=txaim-M_PI)
-				txphi=fmod(txphi+M_PI*2-sweep, M_PI*2);
-			else if((txphi>txaim)&&(txphi<=txaim+M_PI))
-				txphi=max(txphi-sweep, txaim);
 			else
-			{
-				fprintf(stderr, "Impossible txphi/aim relationship!\n");
-				txphi=txaim;
-			}
-			double txmag=cos(M_PI/3)/cos(fmod(txphi, M_PI*2/3.0)-M_PI/3.0);
-			double ft=txt*2*M_PI*txf(G)/txaud.srate;
-			double tx=cos(ft+txphi)*txmag/3.0;
-			txsample(&txaud, tx*(1<<16)*.8);
-			txt++;
-			if(G.moni&&*G.moni)
-			{
-				si=tx*(1<<16)*.6;
-				havesi=true;
-			}
+				txsample(&txaud, 0);
 		}
-		else
-			txsample(&txaud, 0);
 		if(havesi)
 		{
 			double sv=si/(double)(1<<16);
@@ -977,7 +626,379 @@ int main(int argc, char **argv)
 			}
 			specin[t%speclen]=sv;
 			t++;
+			if(!(t%blklen))
+			{
+				fftw_execute(p[bws]);
+				int x,y;
+				ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
+				if(lined[frame%CONSDLEN]) line(G.constel_img, x, y, 60, 60, CONS_BG);
+				pset(G.constel_img, x, y, CONS_BG);
+				fftw_complex half=points[(frame+(CONSDLEN>>1))%CONSDLEN];
+				ztoxy(half, gsf, &x, &y);
+				atg_colour c=(cabs(half)>sens)?(atg_colour){0, 127, 0, ATG_ALPHA_OPAQUE}:(atg_colour){127, 0, 0, ATG_ALPHA_OPAQUE};
+				if(lined[(frame+(CONSDLEN>>1))%CONSDLEN]) line(G.constel_img, x, y, 60, 60, (atg_colour){0, 95, 95, ATG_ALPHA_OPAQUE});
+				pset(G.constel_img, x, y, c);
+				ztoxy(points[frame%CONSDLEN]=fftout[k], gsf, &x, &y);
+				bool green=cabs(fftout[k])>sens;
+				bool enough=false;
+				double da=0;
+				if(cabs(lastsym)>sens)
+					enough=(fabs(da=carg(fftout[k]/lastsym))>(fch?M_PI*2/3.0:M_PI/2));
+				else
+					enough=true;
+				fftw_complex dz=bws?fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN]:fftout[k]/points[(frame+CONSDLEN-1)%CONSDLEN];
+				bool spd=bws?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e2));
+				if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
+				{
+					line(G.constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
+					line(G.phasing_img, 0, 60, G.phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
+					int py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
+					line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, PHAS_BG);
+					old_da[da_ptr]=(da<0)?da+M_PI*4/3.0:da;
+					t_da+=old_da[da_ptr]-M_PI*2/3.0;
+					py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
+					line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
+					unsigned int dt=t-symtime[st_ptr];
+					double baud=rxaud.srate*(st_loop?PHASLEN:st_ptr)/(double)dt;
+					snprintf(G.bauds, 8, "RXB %03d", (int)floor(baud+.5));
+					symtime[st_ptr]=t;
+					st_ptr=(st_ptr+1)%PHASLEN;
+					if(!st_ptr) st_loop=true;
+					da_ptr=(da_ptr+1)%PHASLEN;
+					if(G.afc&&*G.afc&&!da_ptr)
+					{
+						double ch=(t_da/(double)PHASLEN)*10.0;
+						if(fabs(ch)>0.5)
+						{
+							rxf+=ch;
+							setspinval(G.rxf, floor(rxf+.5));
+							fch=true;
+						}
+						t_da=0;
+					}
+					lastsym=fftout[k];
+					if(bitbufp>=BITBUFLEN)
+					{
+						bitbufp--;
+						for(unsigned int i=0;i<bitbufp;i++)
+							bitbuf[i]=bitbuf[i+1];
+					}
+					bitbuf[bitbufp++]=(da>0);
+					int ubits=0;
+					char *text=decode((bbuf){.nbits=bitbufp, .data=bitbuf}, &ubits);
+					if(*text)
+					{
+						size_t tp=strlen(G.outtext[OUTLINES-1]);
+						for(const char *p=text;*p;p++)
+						{
+							if((*p=='\n')||(tp>OUTLINELEN))
+							{
+								for(unsigned int i=0;i<OUTLINES-1;i++)
+									strcpy(G.outtext[i], G.outtext[i+1]);
+								G.outtext[OUTLINES-1][0]=' ';
+								G.outtext[OUTLINES-1][1]=0;
+								tp=1;
+							}
+							if(*p=='\t')
+							{
+								G.outtext[OUTLINES-1][tp++]=' ';
+								while((tp<OUTLINELEN)&&((tp-1)&3))
+									G.outtext[OUTLINES-1][tp++]=' ';
+								G.outtext[OUTLINES-1][tp]=0;
+							}
+							else if(*p!='\n')
+							{
+								G.outtext[OUTLINES-1][tp++]=*p;
+								G.outtext[OUTLINES-1][tp]=0;
+							}
+						}
+					}
+					bitbufp-=ubits;
+					for(unsigned int i=0;i<bitbufp;i++)
+						bitbuf[i]=bitbuf[i+ubits];
+					free(text);
+				}
+				fch=false;
+				pset(G.constel_img, x, y, green?(atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE}:(atg_colour){255, 0, 0, ATG_ALPHA_OPAQUE});
+				frame++;
+				if(t>lastflip)
+				{
+					lastflip+=SAMPLE_RATE/8;
+					if(G.spl) *G.spl=(rxf!=txf(G));
+					if(G.ingi>((INLINES+1)*INLINELEN))
+					{
+						G.ingi-=INLINELEN;
+						memmove(G.ing, G.ing+INLINELEN, G.ingi);
+					}
+					for(unsigned int i=0;i<INLINES;i++)
+						G.intextleft[i][0]=G.intextright[i][0]=0;
+					unsigned int x=0,y=0;
+					for(size_t p=0;p<G.ingi;p++)
+					{
+						G.intextleft[y][x++]=G.ing[p];
+						G.intextleft[y][x]=0;
+						if((G.ing[p]=='\n')||(x>=INLINELEN))
+						{
+							if(y<INLINES-1)
+								y++;
+							else
+							{
+								for(unsigned int i=0;i<y;i++)
+									strcpy(G.intextleft[i], G.intextleft[i+1]);
+								G.intextleft[y][0]=0;
+							}
+							x=0;
+						}
+					}
+					unsigned int sx=0;
+					for(size_t p=0;p<G.inri;p++)
+					{
+						x++;
+						G.intextright[y][sx++]=G.inr[p];
+						G.intextright[y][sx]=0;
+						if((G.inr[p]=='\n')||(x>=INLINELEN))
+						{
+							if(y<INLINES-1)
+								y++;
+							else
+							{
+								for(unsigned int i=0;i<y;i++)
+								{
+									strcpy(G.intextleft[i], G.intextleft[i+1]);
+									strcpy(G.intextright[i], G.intextright[i+1]);
+								}
+								G.intextleft[y][0]=G.intextright[y][0]=0;
+							}
+							x=sx=0;
+						}
+					}
+					for(unsigned int i=0;i<NMACROS;i++)
+						*G.mcol[i]=(i==inp)?(atg_colour){63, 63, 47, ATG_ALPHA_OPAQUE}:(atg_colour){23, 23, 23, ATG_ALPHA_OPAQUE};
+					atg_flip(G.canvas);
+					atg_event e;
+					while(atg_poll_event(&e, G.canvas))
+					{
+						switch(e.type)
+						{
+							case ATG_EV_RAW:;
+								SDL_Event s=e.event.raw;
+								switch(s.type)
+								{
+									case SDL_QUIT:
+										errupt=1;
+									break;
+									case SDL_KEYDOWN:
+										switch(s.key.keysym.sym)
+										{
+											case SDLK_F1:
+												append_str(&G.inr, &G.inrl, &G.inri, G.macro[0]);
+												txstart(8);
+											break;
+											case SDLK_F2:
+												append_str(&G.inr, &G.inrl, &G.inri, G.macro[1]);
+												txstart(8);
+											break;
+											case SDLK_F3:
+												append_str(&G.inr, &G.inrl, &G.inri, G.macro[2]);
+												txstart(8);
+											break;
+											case SDLK_F4:
+												append_str(&G.inr, &G.inrl, &G.inri, G.macro[3]);
+												txstart(8);
+											break;
+											case SDLK_F5:
+												append_str(&G.inr, &G.inrl, &G.inri, G.macro[4]);
+												txstart(8);
+											break;
+											case SDLK_F6:
+												append_str(&G.inr, &G.inrl, &G.inri, G.macro[5]);
+												txstart(8);
+											break;
+											case SDLK_F7:
+												txstart(8);
+											break;
+											case SDLK_F8:
+												if(G.tx) *G.tx=false;
+												txlead=max(txb(G)/2, 8);
+											break;
+											case SDLK_ESCAPE:
+												if(G.tx) *G.tx=false;
+												txlead=0;
+												G.inri=0;
+											break;
+											case SDLK_F9:
+												rxf=txf(G);
+												setspinval(G.rxf, floor(rxf+.5));
+											break;
+											case SDLK_BACKSPACE:
+											{
+												if(inp>=NMACROS)
+												{
+													if(G.inri) G.inr[--G.inri]=0;
+												}
+												else
+												{
+													size_t l=strlen(G.macro[inp]);
+													if(l) G.macro[inp][l-1]=0;
+												}
+											}
+											break;
+											case SDLK_RETURN:
+												if(inp>=NMACROS)
+													append_char(&G.inr, &G.inrl, &G.inri, '\n');
+												else
+												{
+													size_t l=strlen(G.macro[inp]);
+													if(l<MACROLEN-1)
+													{
+														G.macro[inp][l++]='\n';
+														G.macro[inp][l]=0;
+													}
+												}
+											break;
+											case SDLK_KP_ENTER:
+												if(inp>=NMACROS)
+													append_char(&G.inr, &G.inrl, &G.inri, '\r');
+												else
+												{
+													size_t l=strlen(G.macro[inp]);
+													if(l<MACROLEN-1)
+													{
+														G.macro[inp][l++]='\r';
+														G.macro[inp][l]=0;
+													}
+												}
+											break;
+											default:
+												if((s.key.keysym.unicode&0xFF80)==0)
+												{
+													char what=s.key.keysym.unicode&0x7F;
+													if(what)
+													{
+														if(inp>=NMACROS)
+															append_char(&G.inr, &G.inrl, &G.inri, what);
+														else
+														{
+															size_t l=strlen(G.macro[inp]);
+															if(l<MACROLEN-1)
+															{
+																G.macro[inp][l++]=what;
+																G.macro[inp][l]=0;
+															}
+														}
+													}
+												}
+											break;
+										}
+									break;
+								}
+							break;
+							case ATG_EV_CLICK:;
+								atg_ev_click click=e.event.click;
+								if(!click.e)
+									fprintf(stderr, "click.e==NULL\n");
+								else if(click.e->userdata)
+								{
+									if(strcmp(click.e->userdata, "SPEC")==0)
+									{
+										switch(click.button)
+										{
+											case ATG_MB_LEFT:
+												setspinval(G.txf, min(max((click.pos.x+20)*spec_hpp, 200), 800));
+												/* fallthrough */
+											case ATG_MB_RIGHT:
+												rxf=min(max((click.pos.x+20)*spec_hpp, 200), 800);
+												setspinval(G.rxf, floor(rxf+.5));
+											break;
+											default:
+												// ignore
+											break;
+										}
+									}
+								}
+								else
+								{
+									for(unsigned int i=0;i<NMACROS;i++)
+										if(click.e==G.mline[i]) inp=(inp==i)?NMACROS:i;
+								}
+							break;
+							case ATG_EV_TRIGGER:;
+								atg_ev_trigger trigger=e.event.trigger;
+								if(!trigger.e)
+								{
+									fprintf(stderr, "trigger.e==NULL\n");
+								}
+								else
+									fprintf(stderr, "Clicked on unknown button!\n");
+							break;
+							case ATG_EV_VALUE:;
+								atg_ev_value value=e.event.value;
+								if(value.e)
+								{
+									if(value.e==G.bw)
+									{
+										bw=bandwidths[value.value];
+										blklen=floor(rxaud.srate/bw);
+										bw=rxaud.srate/(double)blklen;
+										fprintf(stderr, "frontend: new FFT block length: %lu samples\n", blklen);
+										if(blklen>4095)
+										{
+											fprintf(stderr, "frontend: new FFT block length too long.  Exiting\n");
+											return(1);
+										}
+										fprintf(stderr, "frontend: new filter bandwidth is %g Hz\n", bw);
+										k=max(floor((aif * (double)blklen / (double)rxaud.srate)+0.5), 1);
+										truif=(k*rxaud.srate/(double)blklen);
+										fprintf(stderr, "frontend: new Actual IF: %g Hz\n", truif);
+										gsf=250.0/(double)blklen;
+										sens=(double)blklen/16.0;
+										SDL_FillRect(G.constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(G.constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
+										for(size_t i=0;i<CONSLEN;i++)
+										{
+											points[i]=0;
+											lined[i]=false;
+										}
+										fprintf(stderr, "frontend: all ready to go with new bandwidth\n");
+									}
+									else if(value.e->userdata)
+									{
+										if(strcmp((const char *)value.e->userdata, "TXF")==0)
+										{
+											if(G.spl&&!*G.spl)
+												setspinval(G.rxf, rxf=value.value);
+										}
+										else if(strcmp((const char *)value.e->userdata, "RXF")==0)
+										{
+											rxf=value.value;
+										}
+									}
+								}
+							break;
+							case ATG_EV_TOGGLE:;
+								atg_ev_toggle toggle=e.event.toggle;
+								if(toggle.e)
+								{
+									if(toggle.e->userdata)
+									{
+										if(strcmp((const char *)toggle.e->userdata, "TX")==0)
+											txlead=max(txb(G)/((G.tx&&*G.tx)?1:2), 8);
+										else if(strcmp((const char *)toggle.e->userdata, "SPL")==0)
+										{
+											if(!toggle.state)
+												setspinval(G.rxf, rxf=txf(G));
+										}
+									}
+								}
+							break;
+							default:
+							break;
+						}
+					}
+				}
+			}
 		}
+		if(!(havetx||havesi))
+			SLEEP;
 	}
 	fprintf(stderr, "\nShutting down audio subsystem\n");
 	stop_audiorx(&rxaud);

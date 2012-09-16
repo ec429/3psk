@@ -43,3 +43,4 @@ int init_audiotx(audiobuf *a);
 void txaudio(void *udata, Uint8 *stream, int len);
 void stop_audiotx(audiobuf *a);
 void txsample(audiobuf *a, int16_t samp);
+bool cantx(audiobuf *a);

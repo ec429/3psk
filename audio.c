@@ -151,3 +151,8 @@ void txsample(audiobuf *a, int16_t samp)
 	a->buf[newwp]=samp;
 	a->wp=newwp;
 }
+
+bool cantx(audiobuf *a)
+{
+	return(a->rp!=((a->wp+1)%AUDIOBUFLEN));
+}
