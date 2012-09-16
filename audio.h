@@ -15,7 +15,9 @@
 
 #include <unistd.h>
 #ifdef WINDOWS
-#define SLEEP	Sleep(5)
+#define SLEEP	Sleep(0)
+#include <windef.h>
+#include <winbase.h>
 #else
 #define SLEEP	usleep(5e3)
 #endif
