@@ -14,18 +14,19 @@
 #include <SDL/SDL_audioin.h>
 
 #include <unistd.h>
+
+#define SAMPLE_RATE	22050
 #ifdef WINDOWS
-#define SLEEP	Sleep(0)
+#define SLEEP	Sleep(5)
 #include <windef.h>
 #include <winbase.h>
+#define AUDIOBUFLEN	4096
 #else
 #define SLEEP	usleep(5e3)
+#define AUDIOBUFLEN	1024
 #endif
 
 #include "bits.h"
-
-#define SAMPLE_RATE	22050
-#define AUDIOBUFLEN	1024
 
 typedef struct
 {
