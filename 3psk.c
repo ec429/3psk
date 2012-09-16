@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 	bool init_moni=true, init_afc=false;
 	unsigned int init_txb=60;
 	unsigned int bws=2;
-	unsigned int rxbuflen=AUDIOBUFLEN, txbuflen=AUDIOBUFLEN;
+	unsigned int rxbuflen=AUDIOBUFLEN, txbuflen=AUDIOBUFLEN, sdlbuflen=AUDIOBUFLEN;
 	char init_macro[6][MACROLEN];
 	for(unsigned int i=0;i<6;i++)
 		init_macro[i][0]=0;
@@ -283,6 +283,22 @@ int main(int argc, char **argv)
 						init_afc=true;
 					else if(strcmp(line, "!AFC")==0)
 						init_afc=false;
+					else if(strcmp(line, "Au.SDLBUF")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%u", &sdlbuflen)!=1)
+							{
+								fprintf(stderr, "Bad Au.SDLBUF in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad Au.SDLBUF in conffile: no argument\n");
+							return(1);
+						}
+					}
 					else if(strcmp(line, "Au.TXBUF")==0)
 					{
 						if(colon)
@@ -472,8 +488,8 @@ int main(int argc, char **argv)
 	
 	fprintf(stderr, "Starting audio subsystem\n");
 	audiobuf rxaud, txaud;
-	if(init_audiorx(&rxaud, rxbuflen)) return(1);
-	if(init_audiotx(&txaud, txbuflen)) return(1);
+	if(init_audiorx(&rxaud, rxbuflen, sdlbuflen)) return(1);
+	if(init_audiotx(&txaud, txbuflen, sdlbuflen)) return(1);
 	
 	fprintf(stderr, "Setting up decoder frontend\n");
 	

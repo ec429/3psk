@@ -9,7 +9,7 @@
 
 #include "audio.h"
 
-int init_audiorx(audiobuf *a, unsigned int audiobuflen)
+int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen)
 {
 	if(SDL_InitAudioIn()<0)
 	{
@@ -22,7 +22,7 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen)
 	expected.silence=0;
 	expected.freq=SAMPLE_RATE;
 	expected.channels=1;
-	expected.samples=AUDIOBUFLEN;
+	expected.samples=sdlbuflen;
 	expected.callback=rxaudio;
 	expected.userdata=a;
 	a->buf=malloc(a->audiobuflen*sizeof(int16_t));
@@ -83,7 +83,7 @@ int rxsample(audiobuf *a, int16_t *samp)
 	return(0);
 }
 
-int init_audiotx(audiobuf *a, unsigned int audiobuflen)
+int init_audiotx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen)
 {
 	if(SDL_InitSubSystem(SDL_INIT_AUDIO)<0)
 	{
@@ -96,7 +96,7 @@ int init_audiotx(audiobuf *a, unsigned int audiobuflen)
 	expected.silence=0;
 	expected.freq=SAMPLE_RATE;
 	expected.channels=1;
-	expected.samples=AUDIOBUFLEN;
+	expected.samples=sdlbuflen;
 	expected.callback=txaudio;
 	expected.userdata=a;
 	a->buf=malloc(a->audiobuflen*sizeof(int16_t));

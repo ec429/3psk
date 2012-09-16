@@ -38,12 +38,12 @@ typedef struct
 }
 audiobuf;
 
-int init_audiorx(audiobuf *a, unsigned int audiobuflen);
+int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen);
 void rxaudio(void *udata, Uint8 *stream, int len);
 void stop_audiorx(audiobuf *a);
 int rxsample(audiobuf *a, int16_t *samp); // returns 0 if we got a sample
 
-int init_audiotx(audiobuf *a, unsigned int audiobuflen);
+int init_audiotx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen);
 void txaudio(void *udata, Uint8 *stream, int len);
 void stop_audiotx(audiobuf *a);
 void txsample(audiobuf *a, int16_t samp);
