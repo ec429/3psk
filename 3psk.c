@@ -725,6 +725,8 @@ int main(int argc, char **argv)
 				{
 					lastflip+=SAMPLE_RATE/8;
 					if(G.spl) *G.spl=(rxf!=txf(G));
+					if(G.overrun[0]) *G.overrun[0]=!txaud.underrun;
+					if(G.overrun[1]) *G.overrun[1]=rxaud.underrun;
 					if(G.ingi>((INLINES+1)*INLINELEN))
 					{
 						G.ingi-=INLINELEN;

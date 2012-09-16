@@ -26,6 +26,7 @@ typedef struct
 	unsigned int *bwsel;
 	atg_element *bw, *txb, *txf, *rxf, *rxs, *amp;
 	char *bauds;
+	bool *overrun[2]; // [0=TX, 1=RX]
 	char *intextleft[INLINES], *intextright[INLINES];
 	char *inr, *ing; size_t inrl, inri, ingl, ingi;
 	char *outtext[OUTLINES];
@@ -47,3 +48,4 @@ int setspinval(atg_element *spinner, int value);
 int pset(SDL_Surface *s, unsigned int x, unsigned int y, atg_colour c);
 int line(SDL_Surface *s, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, atg_colour c);
 atg_element *create_selector(unsigned int *sel); // TODO make this malloc its own sel
+atg_element *create_status(bool **status, const char *label, atg_colour fgcolour, atg_colour bgcolour);

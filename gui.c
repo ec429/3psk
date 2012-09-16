@@ -87,13 +87,47 @@ int make_gui(gui *buf, unsigned int *bws)
 			fprintf(stderr, "decoder->elem.box==NULL\n");
 			return(1);
 		}
+		atg_element *audio=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!audio)
+		{
+			fprintf(stderr, "atg_create_element_box failed\n");
+			return(1);
+		}
+		if(atg_pack_element(db, audio))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_box *ab=audio->elem.box;
+		if(!ab)
+		{
+			fprintf(stderr, "audio->elem.box==NULL\n");
+			return(1);
+		}
+		atg_element *ad=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!ad)
+		{
+			fprintf(stderr, "atg_create_element_box failed\n");
+			return(1);
+		}
+		if(atg_pack_element(ab, ad))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_box *adb=ad->elem.box;
+		if(!adb)
+		{
+			fprintf(stderr, "ad->elem.box==NULL\n");
+			return(1);
+		}
 		atg_element *constel=atg_create_element_image(buf->constel_img);
 		if(!constel)
 		{
 			fprintf(stderr, "atg_create_element_image failed\n");
 			return(1);
 		}
-		if(atg_pack_element(db, constel))
+		if(atg_pack_element(adb, constel))
 		{
 			perror("atg_pack_element");
 			return(1);
@@ -104,7 +138,58 @@ int make_gui(gui *buf, unsigned int *bws)
 			fprintf(stderr, "atg_create_element_image failed\n");
 			return(1);
 		}
-		if(atg_pack_element(db, phasing))
+		if(atg_pack_element(adb, phasing))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *ao=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!ao)
+		{
+			fprintf(stderr, "atg_create_element_box failed\n");
+			return(1);
+		}
+		if(atg_pack_element(ab, ao))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_box *aob=ao->elem.box;
+		if(!aob)
+		{
+			fprintf(stderr, "ao->elem.box==NULL\n");
+			return(1);
+		}
+		atg_element *ao_label=atg_create_element_label("AudIO:", 14, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+		if(!ao_label)
+		{
+			fprintf(stderr, "atg_create_element_label failed\n");
+			return(1);
+		}
+		ao_label->cache=true;
+		if(atg_pack_element(aob, ao_label))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *txo=create_status(&buf->overrun[0], "tx overrun", (atg_colour){127, 0, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!txo)
+		{
+			fprintf(stderr, "atg_create_element_status failed\n");
+			return(1);
+		}
+		if(atg_pack_element(aob, txo))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		atg_element *rxo=create_status(&buf->overrun[1], "rx underrun", (atg_colour){0, 127, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!rxo)
+		{
+			fprintf(stderr, "atg_create_element_status failed\n");
+			return(1);
+		}
+		if(atg_pack_element(aob, rxo))
 		{
 			perror("atg_pack_element");
 			return(1);
@@ -729,4 +814,27 @@ void selector_match_click_callback(struct atg_event_list *list, atg_element *ele
 	{
 		atg__push_event(list, (atg_event){.type=ATG_EV_VALUE, .event.value=(atg_ev_value){.e=element, .value=*(unsigned int *)element->userdata}});
 	}
+}
+
+/* An atg match_click_callback to discard all click events */
+void match_click_callback_discard(__attribute__((unused)) struct atg_event_list *list, __attribute__((unused)) atg_element *element, __attribute__((unused)) SDL_MouseButtonEvent button, __attribute__((unused)) unsigned int xoff, __attribute__((unused)) unsigned int yoff)
+{
+	/* Discard all the events */
+	return;
+}
+
+atg_element *create_status(bool **status, const char *label, atg_colour fgcolour, atg_colour bgcolour)
+{
+	atg_element *rv=atg_create_element_toggle(label, false, fgcolour, bgcolour);
+	if(!rv) return(NULL);
+	atg_toggle *t=rv->elem.toggle;
+	if(!t)
+	{
+		atg_free_element(rv);
+		return(NULL);
+	}
+	rv->type=ATG_CUSTOM;
+	rv->match_click_callback=match_click_callback_discard;
+	*status=&t->state;
+	return(rv);
 }
