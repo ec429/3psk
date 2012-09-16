@@ -25,7 +25,7 @@ clean:
 
 dist: all
 	mkdir 3psk_$(VERSION)
-	for p in $$(ls); do cp $$p 3psk_$(VERSION)/$$p; done;
+	-for p in $$(ls); do cp $$p 3psk_$(VERSION)/$$p; done;
 	-rm 3psk_$(VERSION)/*.tgz
 	-rm 3psk_$(VERSION)/*.zip
 	tar -czf 3psk_$(VERSION).tgz 3psk_$(VERSION)/
@@ -33,7 +33,7 @@ dist: all
 
 dists: all
 	mkdir 3psk_$(VERSION)_src
-	for p in *.c *.h Makefile *.htm screenshot.png sample.conf; do cp $$p 3psk_$(VERSION)_src/$$p; done;
+	-for p in *.c *.h Makefile *.htm screenshot.png sample.conf; do cp $$p 3psk_$(VERSION)_src/$$p; done;
 	tar -czf 3psk_$(VERSION)_src.tgz 3psk_$(VERSION)_src/
 	rm -r 3psk_$(VERSION)_src/
 

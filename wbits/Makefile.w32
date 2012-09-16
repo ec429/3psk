@@ -11,6 +11,7 @@ all: 3psk.exe
 
 3psk.exe: 3psk.c $(INCLUDES) $(OBJS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $< $(LDFLAGS) $(OBJS) -o $@ $(LIBS)
+	cp /usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf .
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
