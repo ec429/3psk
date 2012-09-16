@@ -3,3 +3,5 @@ samples
 3psk
 *.o
 3psk_w*/
+*.tgz
+*.zip
