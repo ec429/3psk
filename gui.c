@@ -160,7 +160,7 @@ int make_gui(gui *buf, unsigned int *bws)
 			fprintf(stderr, "ao->elem.box==NULL\n");
 			return(1);
 		}
-		atg_element *ao_label=atg_create_element_label("AudIO:", 14, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+		atg_element *ao_label=atg_create_element_label("AudIO underrun:", 14, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
 		if(!ao_label)
 		{
 			fprintf(stderr, "atg_create_element_label failed\n");
@@ -172,24 +172,24 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *txo=create_status(&buf->overrun[0], "tx overrun", (atg_colour){127, 0, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
-		if(!txo)
+		atg_element *txu=create_status(&buf->underrun[0], "tx", (atg_colour){127, 0, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!txu)
 		{
 			fprintf(stderr, "atg_create_element_status failed\n");
 			return(1);
 		}
-		if(atg_pack_element(aob, txo))
+		if(atg_pack_element(aob, txu))
 		{
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *rxo=create_status(&buf->overrun[1], "rx underrun", (atg_colour){0, 127, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
-		if(!rxo)
+		atg_element *rxu=create_status(&buf->underrun[1], "rx", (atg_colour){0, 127, 0, ATG_ALPHA_OPAQUE}, (atg_colour){0, 0, 0, ATG_ALPHA_OPAQUE});
+		if(!rxu)
 		{
 			fprintf(stderr, "atg_create_element_status failed\n");
 			return(1);
 		}
-		if(atg_pack_element(aob, rxo))
+		if(atg_pack_element(aob, rxu))
 		{
 			perror("atg_pack_element");
 			return(1);

@@ -9,13 +9,14 @@
 
 #include "audio.h"
 
-int init_audiorx(audiobuf *a)
+int init_audiorx(audiobuf *a, unsigned int audiobuflen)
 {
 	if(SDL_InitAudioIn()<0)
 	{
 		fprintf(stderr, "Failed to initialise SDL_audioin: %s\n", SDL_GetError());
 		return(1);
 	}
+	a->audiobuflen=audiobuflen;
 	SDL_AudioSpec expected, result;
 	expected.format=AUDIO_S16;
 	expected.silence=0;
@@ -24,7 +25,13 @@ int init_audiorx(audiobuf *a)
 	expected.samples=AUDIOBUFLEN;
 	expected.callback=rxaudio;
 	expected.userdata=a;
-	for(unsigned int i=0;i<AUDIOBUFLEN;i++)
+	a->buf=malloc(a->audiobuflen*sizeof(int16_t));
+	if(!a->buf)
+	{
+		perror("malloc");
+		return(1);
+	}
+	for(unsigned int i=0;i<a->audiobuflen;i++)
 		a->buf[i]=0;
 	a->rp=a->wp=0;
 
@@ -44,7 +51,7 @@ void rxaudio(void *udata, Uint8 *stream, int len)
 	Sint16 *sData=(Sint16 *)stream;
 	for(int i=0;i<len>>1;i++)
 	{
-		unsigned int newwp=(a->wp+1)%AUDIOBUFLEN;
+		unsigned int newwp=(a->wp+1)%a->audiobuflen;
 		while(a->rp==newwp)
 		{
 			a->underrun=false;
@@ -64,22 +71,26 @@ void stop_audiorx(audiobuf *a)
 
 int rxsample(audiobuf *a, int16_t *samp)
 {
-	unsigned int newrp=(a->rp+1)%AUDIOBUFLEN;
+	unsigned int newrp=(a->rp+1)%a->audiobuflen;
 	if(a->wp==newrp)
+	{
+		a->underrun=true;
 		return(1);
+	}
 	if(samp)
 		*samp=a->buf[newrp];
 	a->rp=newrp;
 	return(0);
 }
 
-int init_audiotx(audiobuf *a)
+int init_audiotx(audiobuf *a, unsigned int audiobuflen)
 {
 	if(SDL_InitSubSystem(SDL_INIT_AUDIO)<0)
 	{
 		fprintf(stderr, "Failed to initialise SDL_audio: %s\n", SDL_GetError());
 		return(1);
 	}
+	a->audiobuflen=audiobuflen;
 	SDL_AudioSpec expected;
 	expected.format=AUDIO_S16;
 	expected.silence=0;
@@ -88,7 +99,13 @@ int init_audiotx(audiobuf *a)
 	expected.samples=AUDIOBUFLEN;
 	expected.callback=txaudio;
 	expected.userdata=a;
-	for(unsigned int i=0;i<AUDIOBUFLEN;i++)
+	a->buf=malloc(a->audiobuflen*sizeof(int16_t));
+	if(!a->buf)
+	{
+		perror("malloc");
+		return(1);
+	}
+	for(unsigned int i=0;i<a->audiobuflen;i++)
 		a->buf[i]=0;
 	a->rp=a->wp=0;
 	SDL_AudioSpec result;
@@ -118,7 +135,7 @@ void txaudio(void *udata, Uint8 *stream, int len)
 	Sint16 *sData=(Sint16 *)stream;
 	for(int i=0;i<len>>1;i++)
 	{
-		unsigned int newrp=(a->rp+1)%AUDIOBUFLEN;
+		unsigned int newrp=(a->rp+1)%a->audiobuflen;
 		while(a->wp==newrp)
 		{
 			a->underrun=true;
@@ -138,7 +155,7 @@ void stop_audiotx(audiobuf *a)
 
 void txsample(audiobuf *a, int16_t samp)
 {
-	unsigned int newwp=(a->wp+1)%AUDIOBUFLEN;
+	unsigned int newwp=(a->wp+1)%a->audiobuflen;
 	while(a->rp==newwp)
 	{
 		a->underrun=false;
@@ -150,5 +167,7 @@ void txsample(audiobuf *a, int16_t samp)
 
 bool cantx(audiobuf *a)
 {
-	return(a->rp!=((a->wp+1)%AUDIOBUFLEN));
+	bool can=a->rp!=((a->wp+1)%a->audiobuflen);
+	if(!can) a->underrun=false;
+	return(can);
 }

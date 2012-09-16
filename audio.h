@@ -30,19 +30,20 @@
 
 typedef struct
 {
+	unsigned int audiobuflen;
 	unsigned int rp, wp;
-	int16_t buf[AUDIOBUFLEN];
+	int16_t *buf;
 	unsigned int srate;
 	bool underrun;
 }
 audiobuf;
 
-int init_audiorx(audiobuf *a);
+int init_audiorx(audiobuf *a, unsigned int audiobuflen);
 void rxaudio(void *udata, Uint8 *stream, int len);
 void stop_audiorx(audiobuf *a);
 int rxsample(audiobuf *a, int16_t *samp); // returns 0 if we got a sample
 
-int init_audiotx(audiobuf *a);
+int init_audiotx(audiobuf *a, unsigned int audiobuflen);
 void txaudio(void *udata, Uint8 *stream, int len);
 void stop_audiotx(audiobuf *a);
 void txsample(audiobuf *a, int16_t samp);

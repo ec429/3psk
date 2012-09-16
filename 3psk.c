@@ -47,6 +47,7 @@ int main(int argc, char **argv)
 	bool init_moni=true, init_afc=false;
 	unsigned int init_txb=60;
 	unsigned int bws=2;
+	unsigned int rxbuflen=AUDIOBUFLEN, txbuflen=AUDIOBUFLEN;
 	char init_macro[6][MACROLEN];
 	for(unsigned int i=0;i<6;i++)
 		init_macro[i][0]=0;
@@ -282,6 +283,38 @@ int main(int argc, char **argv)
 						init_afc=true;
 					else if(strcmp(line, "!AFC")==0)
 						init_afc=false;
+					else if(strcmp(line, "Au.TXBUF")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%u", &txbuflen)!=1)
+							{
+								fprintf(stderr, "Bad Au.TXBUF in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad Au.TXBUF in conffile: no argument\n");
+							return(1);
+						}
+					}
+					else if(strcmp(line, "Au.RXBUF")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%u", &rxbuflen)!=1)
+							{
+								fprintf(stderr, "Bad Au.RXBUF in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad Au.RXBUF in conffile: no argument\n");
+							return(1);
+						}
+					}
 					else
 					{
 						fprintf(stderr, "conffile: ignoring unrecognised line: %s:%s\n", line, colon);
@@ -439,8 +472,8 @@ int main(int argc, char **argv)
 	
 	fprintf(stderr, "Starting audio subsystem\n");
 	audiobuf rxaud, txaud;
-	if(init_audiorx(&rxaud)) return(1);
-	if(init_audiotx(&txaud)) return(1);
+	if(init_audiorx(&rxaud, rxbuflen)) return(1);
+	if(init_audiotx(&txaud, txbuflen)) return(1);
 	
 	fprintf(stderr, "Setting up decoder frontend\n");
 	
@@ -725,8 +758,8 @@ int main(int argc, char **argv)
 				{
 					lastflip+=SAMPLE_RATE/8;
 					if(G.spl) *G.spl=(rxf!=txf(G));
-					if(G.overrun[0]) *G.overrun[0]=!txaud.underrun;
-					if(G.overrun[1]) *G.overrun[1]=rxaud.underrun;
+					if(G.underrun[0]) *G.underrun[0]=txaud.underrun;
+					if(G.underrun[1]) *G.underrun[1]=rxaud.underrun;
 					if(G.ingi>((INLINES+1)*INLINELEN))
 					{
 						G.ingi-=INLINELEN;

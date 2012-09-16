@@ -26,7 +26,7 @@ typedef struct
 	unsigned int *bwsel;
 	atg_element *bw, *txb, *txf, *rxf, *rxs, *amp;
 	char *bauds;
-	bool *overrun[2]; // [0=TX, 1=RX]
+	bool *underrun[2]; // [0=TX, 1=RX]
 	char *intextleft[INLINES], *intextright[INLINES];
 	char *inr, *ing; size_t inrl, inri, ingl, ingi;
 	char *outtext[OUTLINES];
