@@ -555,9 +555,9 @@ int main(int argc, char **argv)
 	unsigned int spec_which=0;
 	double rxdphi=0;
 	
-	double txphi=0;
+	//double txphi=0;
 	bbuf txbits={0, NULL};
-	unsigned int txsetp=0;
+	unsigned int txsetp=0, txoldp=0;
 	unsigned int txlead=0;
 	
 	int errupt=0;
@@ -578,6 +578,7 @@ int main(int argc, char **argv)
 			{
 				if((int)((txt*txb(G))%txaud.srate)<txb(G))
 				{
+					txoldp=txsetp;
 					if(txlead)
 					{
 						txlead--;
@@ -617,7 +618,8 @@ int main(int argc, char **argv)
 						}
 					}
 				}
-				double sweep=txb(G)*M_PI*1.5/(double)rxaud.srate;
+				double frac=min(fmod(txt*txb(G)/(double)(txaud.srate), 1)*2.0, 1.0);
+				/*double sweep=txb(G)*M_PI*2*sin(frac*M_PI)/(double)txaud.srate;
 				double txaim=txsetp*M_PI*2/3.0;
 				if((txphi>txaim-M_PI)&&(txphi<=txaim))
 					txphi=min(txphi+sweep, txaim);
@@ -632,9 +634,16 @@ int main(int argc, char **argv)
 					fprintf(stderr, "Impossible txphi/aim relationship!\n");
 					txphi=txaim;
 				}
-				double txmag=cos(M_PI/3)/cos(fmod(txphi, M_PI*2/3.0)-M_PI/3.0);
-				double ft=txt*2*M_PI*txf(G)/txaud.srate;
-				double tx=cos(ft+txphi)*txmag/3.0;
+				double txmag=1;//cos(M_PI/3)/cos(fmod(txphi, M_PI*2/3.0)-M_PI/3.0);*/
+				double ft=(txt*2*M_PI*txf(G)/txaud.srate);//+sin(t*128.0/(double)txaud.srate)*0.2;
+				//double tx=cos(ft+txphi)*txmag/3.0;
+				double tx=(cos(ft+txsetp*M_PI*2/3.0)*pow(frac, 1.5)+cos(ft+txoldp*M_PI*2/3.0)*pow(1-frac, 1.5))/3.0;
+				/*static int16_t nn=1;
+				if(!nn)
+					nn=1;
+				else if(!(txt&3))
+					nn=(nn<<1)+(((nn>>10)&1)^((nn>>12)&1)^((nn>>13)&1)^((nn>>15)&1));*/
+				//tx+=(nn-32767.5)/65536.0;
 				txsample(&txaud, tx*(1<<16)*.8);
 				txt++;
 				if(G.moni&&*G.moni)
@@ -691,7 +700,8 @@ int main(int argc, char **argv)
 				bool green=cabs(fftout[k])>sens;
 				bool enough=false;
 				double da=0;
-				enough=(fabs(da=carg(fftout[k]))>(fch?M_PI*2/3.0:M_PI/2.0));
+				double mda=fabs(da=carg(fftout[k]));
+				enough=(mda>M_PI/3.0);//&&(mda<M_PI*0.83);
 				fftw_complex dz=bws?fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN]:fftout[k]/points[(frame+CONSDLEN-1)%CONSDLEN];
 				bool spd=bws?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e2));
 				if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
@@ -721,7 +731,6 @@ int main(int argc, char **argv)
 							{
 								rxf+=ch;
 								setspinval(G.rxf, floor(rxf+.5));
-								fch=true;
 							}
 						}
 						t_da=0;
@@ -767,7 +776,6 @@ int main(int argc, char **argv)
 						bitbuf[i]=bitbuf[i+ubits];
 					free(text);
 				}
-				fch=false;
 				pset(G.constel_img, x, y, green?(atg_colour){0, 255, 0, ATG_ALPHA_OPAQUE}:(atg_colour){255, 0, 0, ATG_ALPHA_OPAQUE});
 				frame++;
 				if(t>lastflip)
