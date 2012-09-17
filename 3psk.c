@@ -23,7 +23,7 @@
 #include "frontend.h"
 #include "audio.h"
 
-#define CONSLEN	1024
+#define CONSLEN	256
 #define CONSDLEN	((int)floor(CONSLEN*min(bw, 750)/750))
 #define BITBUFLEN	16
 #define PHASLEN	25
@@ -532,7 +532,6 @@ int main(int argc, char **argv)
 		points[i]=0;
 		lined[i]=false;
 	}
-	fftw_complex lastsym=0;
 	
 	bool bitbuf[BITBUFLEN];
 	unsigned int bitbufp=0;
@@ -554,6 +553,7 @@ int main(int argc, char **argv)
 		for(unsigned int j=0;j<160;j++)
 			spec_pt[i][j]=60;
 	unsigned int spec_which=0;
+	double rxdphi=0;
 	
 	double txphi=0;
 	bbuf txbits={0, NULL};
@@ -649,7 +649,7 @@ int main(int argc, char **argv)
 		if(havesi)
 		{
 			double sv=si/(double)(1<<16);
-			double phi=t*2*M_PI*(truif-rxf)/rxaud.srate;
+			double phi=(t*2*M_PI*(truif-rxf)/rxaud.srate)+rxdphi;
 			fftin[t%blklen]=sv*(cos(phi)+I*sin(phi))*amp(G)/5.0;
 			if(!(t%speclen))
 			{
@@ -691,14 +691,12 @@ int main(int argc, char **argv)
 				bool green=cabs(fftout[k])>sens;
 				bool enough=false;
 				double da=0;
-				if(cabs(lastsym)>sens)
-					enough=(fabs(da=carg(fftout[k]/lastsym))>(fch?M_PI*2/3.0:M_PI/2));
-				else
-					enough=true;
+				enough=(fabs(da=carg(fftout[k]))>(fch?M_PI*2/3.0:M_PI/2.0));
 				fftw_complex dz=bws?fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN]:fftout[k]/points[(frame+CONSDLEN-1)%CONSDLEN];
 				bool spd=bws?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e2));
 				if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
 				{
+					rxdphi-=da;
 					line(G.constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
 					line(G.phasing_img, 0, 60, G.phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
 					int py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
@@ -714,18 +712,20 @@ int main(int argc, char **argv)
 					st_ptr=(st_ptr+1)%PHASLEN;
 					if(!st_ptr) st_loop=true;
 					da_ptr=(da_ptr+1)%PHASLEN;
-					if(G.afc&&*G.afc&&!da_ptr)
+					if(!da_ptr)
 					{
-						double ch=(t_da/(double)PHASLEN)*10.0;
-						if(fabs(ch)>0.5)
+						if(G.afc&&*G.afc)
 						{
-							rxf+=ch;
-							setspinval(G.rxf, floor(rxf+.5));
-							fch=true;
+							double ch=(t_da/(double)PHASLEN)*5.0;
+							if(fabs(ch)>0.5)
+							{
+								rxf+=ch;
+								setspinval(G.rxf, floor(rxf+.5));
+								fch=true;
+							}
 						}
 						t_da=0;
 					}
-					lastsym=fftout[k];
 					if(bitbufp>=BITBUFLEN)
 					{
 						bitbufp--;
