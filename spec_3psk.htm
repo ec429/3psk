@@ -9,7 +9,7 @@
 <h1>3PSK Specification</h1>
 <h5>3PSK is a datamode for amateur radio, based on PSK</h5>
 <p>This is the specification of the 3PSK datamode.  For the user manual for the 3psk software, see the <a href="readme.htm">readme</a>.</p>
-<p>This is version 0.3, dated 27th July 2012.</p>
+<p>This is version 0.4, dated 19th August 2013.</p>
 </div><!--#title-->
 <div id="abstract">
 <h2>Abstract</h2>
@@ -41,7 +41,7 @@
 </div><!--#fundamentals-->
 <div id="theory">
 <h2>Theoretical Considerations</h2>
-<p>It must be stressed that the gains provided by 3PSK are not, mathematically speaking, 'free'; there is a drop in signal-to-noise performance due to the fact that we are only carrying 1 bit of data from a channel with 3 states (i.e., log<sub>2</sub>(3) &asymp; 1.58 bits); thus the signal-to-noise ratio is effectively worsened by about 1.5<acronym title="decibels">dB</acronym>.  However, this can usually be made up for with only a small reduction in baud rate (and hence bandwidth), and since this is usually much smaller than the 'steps' between the various agreed-upon BPSK baud rates, 3PSK should typically outperform BPSK in most operational conditions.  For instance, if speed is simply not required, the lowest BPSK can go is typically 31.25 baud, whereas 3PSK can be operated at speeds right down to 1 baud, which, if suitably narrow filters are used, can reasonably be expected to punch through even in the presence of very heavy noise; certainly the gain by using a tiny fraction of the bandwidth more than offsets the 1.5dB cost for the extra state.  A possible further refinement would be 5-, 9-, 17- etc. phase keying: the cost of the extra symbol is reduced in each case as it is spread over more data bits, but higher order PSK generally performs worse in noisy conditions, which may cancel out this benefit in some use cases.  Further discussion of these matters may be forthcoming in the future.</p>
+<p>It must be stressed that the gains provided by 3PSK are not, mathematically speaking, 'free'; there is a drop in signal-to-noise performance due to the fact that we are only carrying 1 bit of data from a channel with 3 states (i.e., log<sub>2</sub>(3) &asymp; 1.58 bits); thus the signal-to-noise ratio is effectively worsened by about 1.5<acronym title="decibels">dB</acronym>.  However, this can usually be made up for with only a small reduction in baud rate (and hence bandwidth), and since this is usually much smaller than the 'steps' between the various agreed-upon BPSK baud rates, 3PSK should typically outperform BPSK in most operational conditions.  For instance, if speed is simply not required, the lowest BPSK can go is typically 31.25 baud, whereas 3PSK can be operated at speeds right down to 1 baud, which, if suitably narrow filters are used, can reasonably be expected to punch through even in the presence of very heavy noise; certainly the gain by using a tiny fraction of the bandwidth more than offsets the 1.5dB cost for the extra state.  It must be noted, however, that the current design of 3PSK decoder can only handle a frequency error of about 60% of the baud rate, which, while not a serious hindrance at 30 baud, is rather difficult to achieve at 1 baud.  A possible further refinement would be 5-, 9-, 17- etc. phase keying: the cost of the extra symbol is reduced in each case as it is spread over more data bits, but higher order PSK generally performs worse in noisy conditions, which may cancel out this benefit in some use cases.  Further discussion of these matters may be forthcoming in the future.</p>
 </div><!--#theory-->
 <div id="implementation">
 <h2>Implementation</h2>
@@ -61,7 +61,8 @@
 <div id="testing">
 <h2>Testing</h2>
 <p>A previous implementation of 3PSK was tested 'on air', but the tests were not a great success owing to the poor user interface - the operator at the other end struggled to get it to work properly.  However, a few fragments of text were copied successfully.</p>
-<p>The current implementation has only been tested locally by means of acoustic coupling (and still more directly by the 'monitor' facility).  It seems capable of stable decoding at baud rates ranging from 1 baud to 400 baud, although at the upper end it becomes increasingly finicky and the error rate rises to about 2%.  A more realistic upper limit is 300 baud.</p>
+<p>The current implementation was then tested locally by means of acoustic coupling (and still more directly by the 'monitor' facility).  It seemed capable of stable decoding at baud rates ranging from 1 baud to 400 baud, although at the upper end it becomes increasingly finicky and the error rate rises to about 2%.  A more realistic upper limit is 300 baud.</p>
+<p>The next phase was to again test over an RF link; this proved unsuccessful due to the poor <acronym title="Automatic Frequency Control">AFC</acronym> capabilities of the decoder at that time, preventing it from 'locking on' to the received signal.  The AFC has since been improved (with a 'coarse' mode based on winding to complement the existing 'fine' mode based on transitions), and further testing is planned.</p>
 </div><!--#testing-->
 <div id="conclusion">
 <h2>Conclusion</h2>
