@@ -27,7 +27,9 @@
 #endif
 
 #include "bits.h"
+#ifdef WAVLIB
 #include "wavlib/wavlib.h"
+#endif
 
 typedef struct
 {
@@ -37,7 +39,9 @@ typedef struct
 	unsigned int srate;
 	bool underrun;
 	FILE *wav;
+#ifdef WAVLIB
 	wavhdr wavhdr;
+#endif
 }
 audiobuf;
 

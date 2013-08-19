@@ -16,9 +16,14 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, 
 	a->audiobuflen=audiobuflen;
 	if(wav)
 	{
+#ifdef WAVLIB
 		a->wav=wav;
 		int e=read_wh44(wav, &a->wavhdr);
 		if(e) return(e);
+#else /* !WAVLIB */
+		fprintf(stderr, "WAV support (--rx) not compiled in!\n");
+		return(1);
+#endif
 	}
 	else
 	{
@@ -47,9 +52,15 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, 
 	a->rp=a->wp=0;
 
 	if(wav)
+	{
+#ifdef WAVLIB
 		a->srate=a->wavhdr.sample_rate;
+#endif
+	}
 	else
+	{
 		a->srate=SAMPLE_RATE; // should use result.freq, but SDL_audioin doesn't populate it
+	}
 	if(SDL_OpenAudioIn(&expected,&result)<0)
 	{
 		fprintf(stderr, "Can't open audio input: %s\n", SDL_GetError());
@@ -87,6 +98,7 @@ int rxsample(audiobuf *a, int16_t *samp)
 {
 	if(a->wav)
 	{
+#ifdef WAVLIB
 		if(feof(a->wav))
 		{
 			fclose(a->wav);
@@ -99,6 +111,10 @@ int rxsample(audiobuf *a, int16_t *samp)
 			if(samp) *samp=i;
 			return(0);
 		}
+#else
+		fprintf(stderr, "a->wav was set for some reason but no WAVLIB, so unsetting\n");
+		a->wav=NULL;
+#endif
 	}
 	unsigned int newrp=(a->rp+1)%a->audiobuflen;
 	if(a->wp==newrp)
