@@ -51,6 +51,7 @@ int main(int argc, char **argv)
 	char init_macro[6][MACROLEN];
 	for(unsigned int i=0;i<6;i++)
 		init_macro[i][0]=0;
+	const char *wavrx=NULL;
 	const char *conffile=NULL;
 	for(int arg=1;arg<argc;arg++)
 	{
@@ -355,16 +356,16 @@ int main(int argc, char **argv)
 	{
 		if(strncmp(argv[arg], "--txf=", 6)==0)
 		{
-			sscanf(argv[arg]+7, "%u", &init_txf);
+			sscanf(argv[arg]+6, "%u", &init_txf);
 		}
 		else if(strncmp(argv[arg], "--rxf=", 6)==0)
 		{
-			sscanf(argv[arg]+7, "%lg", &rxf);
+			sscanf(argv[arg]+6, "%lg", &rxf);
 			setrxf=true;
 		}
 		else if(strncmp(argv[arg], "--rxs=", 6)==0)
 		{
-			sscanf(argv[arg]+7, "%u", &init_rxs);
+			sscanf(argv[arg]+6, "%u", &init_rxs);
 		}
 		else if(strncmp(argv[arg], "--if=", 5)==0)
 		{
@@ -413,6 +414,10 @@ int main(int argc, char **argv)
 		else if(strcmp(argv[arg], "--no-afc")==0)
 		{
 			init_afc=false;
+		}
+		else if(strncmp(argv[arg], "--rx=", 5)==0)
+		{
+			wavrx=argv[arg]+5;
 		}
 		else
 		{
@@ -487,8 +492,10 @@ int main(int argc, char **argv)
 	unsigned int inp=NMACROS;
 	
 	fprintf(stderr, "Starting audio subsystem\n");
+	FILE *rwf=NULL;
+	if(wavrx) rwf=fopen(wavrx, "rb");
 	audiobuf rxaud, txaud;
-	if(init_audiorx(&rxaud, rxbuflen, sdlbuflen)) return(1);
+	if(init_audiorx(&rxaud, rxbuflen, sdlbuflen, rwf)) return(1);
 	if(init_audiotx(&txaud, txbuflen, sdlbuflen)) return(1);
 	
 	fprintf(stderr, "Setting up decoder frontend\n");
@@ -547,6 +554,7 @@ int main(int argc, char **argv)
 	for(size_t i=0;i<PHASLEN;i++)
 		symtime[i]=0;
 	bool st_loop=false;
+	bool crossed[2]={false, false};
 	
 	unsigned int spec_pt[8][160];
 	for(unsigned int i=0;i<8;i++)
@@ -688,6 +696,9 @@ int main(int argc, char **argv)
 			{
 				fftw_execute(p[bws]);
 				int x,y;
+				double oldphi=carg(points[frame%CONSDLEN]), newphi=carg(fftout[k]);
+				if((0<oldphi)&&(oldphi<M_PI/3.0)&&(newphi>M_PI/3.0)) crossed[0]=true;
+				if((0>oldphi)&&(oldphi>-M_PI/3.0)&&(newphi<-M_PI/3.0)) crossed[1]=true;
 				ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
 				if(lined[frame%CONSDLEN]) line(G.constel_img, x, y, 60, 60, CONS_BG);
 				pset(G.constel_img, x, y, CONS_BG);
@@ -722,6 +733,19 @@ int main(int argc, char **argv)
 					st_ptr=(st_ptr+1)%PHASLEN;
 					if(!st_ptr) st_loop=true;
 					da_ptr=(da_ptr+1)%PHASLEN;
+					if(crossed[(da>0)?1:0]&&!crossed[(da>0)?0:1])
+					{
+						if(G.afc&&*G.afc)
+						{
+							double ch=2.0/da;
+							if(fabs(ch)>0.2)
+							{
+								rxf-=ch;
+								setspinval(G.rxf, floor(rxf+.5));
+							}
+						}
+					}
+					crossed[0]=crossed[1]=false;
 					if(!da_ptr)
 					{
 						if(G.afc&&*G.afc)

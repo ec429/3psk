@@ -8,16 +8,27 @@
 */
 
 #include "audio.h"
+#include <math.h> // for floor()
 
-int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen)
+int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, FILE *wav)
 {
+	SDL_AudioSpec expected, result;
+	a->audiobuflen=audiobuflen;
+	if(wav)
+	{
+		a->wav=wav;
+		int e=read_wh44(wav, &a->wavhdr);
+		if(e) return(e);
+	}
+	else
+	{
+		a->wav=NULL;
+	}
 	if(SDL_InitAudioIn()<0)
 	{
 		fprintf(stderr, "Failed to initialise SDL_audioin: %s\n", SDL_GetError());
 		return(1);
 	}
-	a->audiobuflen=audiobuflen;
-	SDL_AudioSpec expected, result;
 	expected.format=AUDIO_S16;
 	expected.silence=0;
 	expected.freq=SAMPLE_RATE;
@@ -35,12 +46,15 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen)
 		a->buf[i]=0;
 	a->rp=a->wp=0;
 
+	if(wav)
+		a->srate=a->wavhdr.sample_rate;
+	else
+		a->srate=SAMPLE_RATE; // should use result.freq, but SDL_audioin doesn't populate it
 	if(SDL_OpenAudioIn(&expected,&result)<0)
 	{
 		fprintf(stderr, "Can't open audio input: %s\n", SDL_GetError());
 		return(1);
 	}
-	a->srate=SAMPLE_RATE; // should use result.freq, but SDL_audioin doesn't populate it
 	SDL_PauseAudioIn(0);
 	return(0);
 }
@@ -71,6 +85,21 @@ void stop_audiorx(audiobuf *a)
 
 int rxsample(audiobuf *a, int16_t *samp)
 {
+	if(a->wav)
+	{
+		if(feof(a->wav))
+		{
+			fclose(a->wav);
+			a->wav=NULL;
+		}
+		else
+		{
+			double v=read_sample(a->wavhdr, a->wav);
+			int16_t i=floor((v-0.5)*65535);
+			if(samp) *samp=i;
+			return(0);
+		}
+	}
 	unsigned int newrp=(a->rp+1)%a->audiobuflen;
 	if(a->wp==newrp)
 	{

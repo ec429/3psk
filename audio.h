@@ -27,6 +27,7 @@
 #endif
 
 #include "bits.h"
+#include "wavlib/wavlib.h"
 
 typedef struct
 {
@@ -35,10 +36,12 @@ typedef struct
 	int16_t *buf;
 	unsigned int srate;
 	bool underrun;
+	FILE *wav;
+	wavhdr wavhdr;
 }
 audiobuf;
 
-int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen);
+int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, FILE *wav);
 void rxaudio(void *udata, Uint8 *stream, int len);
 void stop_audiorx(audiobuf *a);
 int rxsample(audiobuf *a, int16_t *samp); // returns 0 if we got a sample
