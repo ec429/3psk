@@ -45,8 +45,11 @@ distw: all
 	-for p in $$(ls wbits); do cp wbits/$$p 3psk_w$(VERSION)/$$p; done;
 	-rm 3psk_w$(VERSION)/*.tgz
 	-rm 3psk_w$(VERSION)/*.zip
-	-rm 3psk_$(VERSION)/*.wav
+	-rm 3psk_w$(VERSION)/*.wav
 	-rm 3psk_w$(VERSION)/*.o
 	-rm 3psk_w$(VERSION)/3psk
 	make -C 3psk_w$(VERSION) -fMakefile.w32 all
+	-rm 3psk_w$(VERSION).zip
+	zip -r 3psk_w$(VERSION).zip 3psk_w$(VERSION)
+	rm -r 3psk_w$(VERSION)/
 
