@@ -28,6 +28,7 @@ dist: all
 	-for p in $$(ls); do cp $$p 3psk_$(VERSION)/$$p; done;
 	-rm 3psk_$(VERSION)/*.tgz
 	-rm 3psk_$(VERSION)/*.zip
+	-rm 3psk_$(VERSION)/*.wav
 	tar -czf 3psk_$(VERSION).tgz 3psk_$(VERSION)/
 	rm -r 3psk_$(VERSION)/
 
@@ -44,6 +45,7 @@ distw: all
 	-for p in $$(ls wbits); do cp wbits/$$p 3psk_w$(VERSION)/$$p; done;
 	-rm 3psk_w$(VERSION)/*.tgz
 	-rm 3psk_w$(VERSION)/*.zip
+	-rm 3psk_$(VERSION)/*.wav
 	-rm 3psk_w$(VERSION)/*.o
 	-rm 3psk_w$(VERSION)/3psk
 	make -C 3psk_w$(VERSION) -fMakefile.w32 all
