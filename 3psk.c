@@ -737,7 +737,7 @@ int main(int argc, char **argv)
 					{
 						if(G.afc&&*G.afc)
 						{
-							double ch=2.0/da;
+							double ch=4.0/da;
 							if(fabs(ch)>0.2)
 							{
 								rxf-=ch;
