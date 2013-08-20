@@ -543,11 +543,11 @@ int main(int argc, char **argv)
 	bool bitbuf[BITBUFLEN];
 	unsigned int bitbufp=0;
 	
-	unsigned int da_ptr=0;
 	double old_da[PHASLEN];
 	for(size_t i=0;i<PHASLEN;i++)
 		old_da[i]=0;
 	double t_da=0;
+	double b_da[2]={-1, 1};
 	bool fch=false;
 	unsigned int st_ptr=0;
 	unsigned int symtime[PHASLEN];
@@ -694,9 +694,10 @@ int main(int argc, char **argv)
 			t++;
 			if(!(t%blklen))
 			{
+				static fftw_complex oldz=0;
 				fftw_execute(p[bws]);
 				int x,y;
-				double oldphi=carg(points[frame%CONSDLEN]), newphi=carg(fftout[k]);
+				double oldphi=carg(oldz), newphi=carg(fftout[k]);
 				if((0<oldphi)&&(oldphi<M_PI/3.0)&&(newphi>M_PI/3.0)) crossed[0]=true;
 				if((0>oldphi)&&(oldphi>-M_PI/3.0)&&(newphi<-M_PI/3.0)) crossed[1]=true;
 				ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
@@ -710,54 +711,57 @@ int main(int argc, char **argv)
 				ztoxy(points[frame%CONSDLEN]=fftout[k], gsf, &x, &y);
 				bool green=cabs(fftout[k])>sens;
 				bool enough=false;
-				double da=0;
+				double da;
 				double mda=fabs(da=carg(fftout[k]));
 				enough=(mda>M_PI/3.0);//&&(mda<M_PI*0.83);
 				fftw_complex dz=bws?fftout[k]-points[(frame+CONSDLEN-1)%CONSDLEN]:fftout[k]/points[(frame+CONSDLEN-1)%CONSDLEN];
 				bool spd=bws?(cabs(dz)<cabs(fftout[k])*blklen*blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e4)):(fabs(carg(dz))<blklen/(exp2(((signed)rxs(G)-32)/4.0)*2e2));
+				oldz=fftout[k];
 				if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
 				{
 					rxdphi-=da;
 					line(G.constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
 					line(G.phasing_img, 0, 60, G.phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
-					int py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
-					line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, PHAS_BG);
-					old_da[da_ptr]=(da<0)?da+M_PI*4/3.0:da;
-					t_da+=old_da[da_ptr]-M_PI*2/3.0;
-					py=60+(old_da[da_ptr]-M_PI*2/3.0)*60;
-					line(G.phasing_img, da_ptr*G.phasing_img->w/PHASLEN, py, (da_ptr+1)*G.phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
+					int py=60+(old_da[st_ptr]-M_PI*2/3.0)*60;
+					line(G.phasing_img, st_ptr*G.phasing_img->w/PHASLEN, py, (st_ptr+1)*G.phasing_img->w/PHASLEN, py, PHAS_BG);
+					old_da[st_ptr]=(da<0)?da+M_PI*4/3.0:da;
+					double d_da=old_da[st_ptr]-M_PI*2/3.0;
+					t_da+=d_da;
+					py=60+d_da*60;
+					b_da[0]=max(b_da[0], d_da);
+					b_da[1]=min(b_da[1], d_da);
+					line(G.phasing_img, st_ptr*G.phasing_img->w/PHASLEN, py, (st_ptr+1)*G.phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
 					unsigned int dt=t-symtime[st_ptr];
 					double baud=rxaud.srate*(st_loop?PHASLEN:st_ptr)/(double)dt;
 					snprintf(G.bauds, 8, "RXB %03d", (int)floor(baud+.5));
 					symtime[st_ptr]=t;
 					st_ptr=(st_ptr+1)%PHASLEN;
 					if(!st_ptr) st_loop=true;
-					da_ptr=(da_ptr+1)%PHASLEN;
-					if(crossed[(da>0)?1:0]&&!crossed[(da>0)?0:1])
+					if(G.afc&&*G.afc)
 					{
-						if(G.afc&&*G.afc)
+						if(crossed[(da>0)?1:0]&&!crossed[(da>0)?0:1])
 						{
 							double ch=4.0/da;
-							if(fabs(ch)>0.2)
-							{
-								rxf-=ch;
-								setspinval(G.rxf, floor(rxf+.5));
-							}
+							rxf-=ch;
+							setspinval(G.rxf, floor(rxf+.5));
 						}
 					}
 					crossed[0]=crossed[1]=false;
-					if(!da_ptr)
+					if(!st_ptr)
 					{
 						if(G.afc&&*G.afc)
 						{
-							double ch=(t_da/(double)PHASLEN)*2.5;
-							if(fabs(ch)>0.5)
+							double diff=b_da[0]-b_da[1];
+							double ch=t_da*rxaud.srate/(double)(dt*M_PI*2.0);
+							if(fabs(ch)>0.1&&fabs(diff)<0.5)
 							{
 								rxf+=ch;
 								setspinval(G.rxf, floor(rxf+.5));
 							}
 						}
 						t_da=0;
+						b_da[0]=-1;
+						b_da[1]=1;
 					}
 					if(bitbufp>=BITBUFLEN)
 					{
