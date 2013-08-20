@@ -19,7 +19,11 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, 
 #ifdef WAVLIB
 		a->wav=wav;
 		int e=read_wh44(wav, &a->wavhdr);
-		if(e) return(e);
+		if(e)
+		{
+			fprintf(stderr, "Failed to read WAV header\n");
+			return(e);
+		}
 #else /* !WAVLIB */
 		fprintf(stderr, "WAV support (--rx) not compiled in!\n");
 		return(1);

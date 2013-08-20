@@ -494,8 +494,8 @@ int main(int argc, char **argv)
 	FILE *rwf=NULL;
 	if(wavrx) rwf=fopen(wavrx, "rb");
 	audiobuf rxaud, txaud;
-	if(init_audiorx(&rxaud, rxbuflen, sdlbuflen, rwf)) return(1);
-	if(init_audiotx(&txaud, txbuflen, sdlbuflen)) return(1);
+	if(init_audiorx(&rxaud, rxbuflen, sdlbuflen, rwf)) {fprintf(stderr, "Failed to initialise RX AudIO\n"); return(1);}
+	if(init_audiotx(&txaud, txbuflen, sdlbuflen)) {fprintf(stderr, "Failed to initialise TX AudIO\n"); return(1);}
 	
 	fprintf(stderr, "Setting up decoder frontend\n");
 	
