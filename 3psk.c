@@ -83,7 +83,6 @@ int main(int argc, char **argv)
 		if(!conffp)
 		{
 			fprintf(stderr, "Failed to open %s: fopen: %s\n", fn, strerror(errno));
-			return(1);
 		}
 		free(fn);
 	}
