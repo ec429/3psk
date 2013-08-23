@@ -445,6 +445,7 @@ int main(int argc, char **argv)
 			return(1);
 		}
 	}
+	sleeptime=(min(rxbuflen, txbuflen)*500)/sample_rate;
 	if(!setrxf) rxf=init_txf;
 	fprintf(stderr, "Constructing GUI\n");
 	gui G;
@@ -595,11 +596,11 @@ int main(int argc, char **argv)
 	{
 		int16_t si;
 		bool havesi=false;
+		bool havetx=cantx(&txaud);
 		if(G.moni&&*G.moni&&((G.tx&&*G.tx)||txlead))
 			rxsample(&rxaud, NULL);
 		else
 			havesi=!rxsample(&rxaud, &si);
-		bool havetx=cantx(&txaud);
 		if(havetx)
 		{
 			if((G.tx&&*G.tx)||txlead)

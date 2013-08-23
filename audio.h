@@ -24,7 +24,7 @@
 #define AUDIOBUFLEN	1024
 #endif
 
-#define SLEEP SDL_Delay(5)
+#define SLEEP SDL_Delay(sleeptime)
 
 #include "bits.h"
 #ifdef WAVLIB
@@ -45,7 +45,7 @@ typedef struct
 }
 audiobuf;
 
-unsigned int sample_rate;
+unsigned int sample_rate, sleeptime;
 
 int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, FILE *wav);
 void rxaudio(void *udata, Uint8 *stream, int len);
