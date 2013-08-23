@@ -385,7 +385,7 @@ int main(int argc, char **argv)
 		}
 		else if(strncmp(argv[arg], "--sr=", 5)==0)
 		{
-			sscanf(argv[arg]+6, "%u", &sample_rate);
+			sscanf(argv[arg]+5, "%u", &sample_rate);
 		}
 		else if(strncmp(argv[arg], "--if=", 5)==0)
 		{
