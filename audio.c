@@ -40,7 +40,7 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, 
 	}
 	expected.format=AUDIO_S16;
 	expected.silence=0;
-	expected.freq=SAMPLE_RATE;
+	expected.freq=sample_rate;
 	expected.channels=1;
 	expected.samples=sdlbuflen;
 	expected.callback=rxaudio;
@@ -63,7 +63,7 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, 
 	}
 	else
 	{
-		a->srate=SAMPLE_RATE; // should use result.freq, but SDL_audioin doesn't populate it
+		a->srate=sample_rate; // should use result.freq, but SDL_audioin doesn't populate it
 	}
 	if(SDL_OpenAudioIn(&expected,&result)<0)
 	{
@@ -72,13 +72,19 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, 
 	}
 	if(result.format!=expected.format)
 	{
-		fprintf(stderr, "Failed to get the right audio format\n");
-		return(1);
+		fprintf(stderr, "Warning, got the wrong audio format; strange things may happen\n");
+		fprintf(stderr, "\tRequested %04x, got %04x\n", expected.format, result.format);
+#ifndef WINDOWS
+		fprintf(stderr, "\t(We may be ok; SDL_audioin reports bogus values)\n");
+#endif
 	}
 	if(result.freq!=expected.freq)
 	{
 		fprintf(stderr, "Warning, got the wrong sample rate; strange things may happen\n");
 		fprintf(stderr, "\tRequested %uHz, got %uHz\n", expected.freq, result.freq);
+#ifndef WINDOWS
+		fprintf(stderr, "\t(We may be ok; SDL_audioin reports bogus values)\n");
+#endif
 	}
 	SDL_PauseAudioIn(0);
 	return(0);
@@ -153,7 +159,7 @@ int init_audiotx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen)
 	SDL_AudioSpec expected;
 	expected.format=AUDIO_S16;
 	expected.silence=0;
-	expected.freq=SAMPLE_RATE;
+	expected.freq=sample_rate;
 	expected.channels=1;
 	expected.samples=sdlbuflen;
 	expected.callback=txaudio;

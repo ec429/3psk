@@ -53,6 +53,7 @@ int main(int argc, char **argv)
 		init_macro[i][0]=0;
 	const char *wavrx=NULL;
 	const char *conffile=NULL;
+	sample_rate=SAMPLE_RATE;
 	for(int arg=1;arg<argc;arg++)
 	{
 		if(strncmp(argv[arg], "--conf=", 7)==0)
@@ -275,6 +276,22 @@ int main(int argc, char **argv)
 							return(1);
 						}
 					}
+					else if(strcmp(line, "SR")==0)
+					{
+						if(colon)
+						{
+							if(sscanf(colon, "%u", &sample_rate)!=1)
+							{
+								fprintf(stderr, "Bad SR in conffile: %s not numeric\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad SR in conffile: no argument\n");
+							return(1);
+						}
+					}
 					else if(strcmp(line, "MONI")==0)
 						init_moni=true;
 					else if(strcmp(line, "!MONI")==0)
@@ -365,6 +382,10 @@ int main(int argc, char **argv)
 		else if(strncmp(argv[arg], "--rxs=", 6)==0)
 		{
 			sscanf(argv[arg]+6, "%u", &init_rxs);
+		}
+		else if(strncmp(argv[arg], "--sr=", 5)==0)
+		{
+			sscanf(argv[arg]+6, "%u", &sample_rate);
 		}
 		else if(strncmp(argv[arg], "--if=", 5)==0)
 		{
@@ -807,7 +828,7 @@ int main(int argc, char **argv)
 				frame++;
 				if(t>lastflip)
 				{
-					lastflip+=SAMPLE_RATE/8;
+					lastflip+=sample_rate/8;
 					if(G.spl) *G.spl=(rxf!=txf(G));
 					if(G.underrun[0]) *G.underrun[0]=txaud.underrun;
 					if(G.underrun[1]) *G.underrun[1]=rxaud.underrun;

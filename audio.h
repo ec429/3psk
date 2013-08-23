@@ -45,6 +45,8 @@ typedef struct
 }
 audiobuf;
 
+unsigned int sample_rate;
+
 int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, FILE *wav);
 void rxaudio(void *udata, Uint8 *stream, int len);
 void stop_audiorx(audiobuf *a);
