@@ -70,6 +70,16 @@ int init_audiorx(audiobuf *a, unsigned int audiobuflen, unsigned int sdlbuflen, 
 		fprintf(stderr, "Can't open audio input: %s\n", SDL_GetError());
 		return(1);
 	}
+	if(result.format!=expected.format)
+	{
+		fprintf(stderr, "Failed to get the right audio format\n");
+		return(1);
+	}
+	if(result.freq!=expected.freq)
+	{
+		fprintf(stderr, "Warning, got the wrong sample rate; strange things may happen\n");
+		fprintf(stderr, "\tRequested %uHz, got %uHz\n", expected.freq, result.freq);
+	}
 	SDL_PauseAudioIn(0);
 	return(0);
 }
