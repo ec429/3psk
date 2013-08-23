@@ -17,14 +17,14 @@
 
 #define SAMPLE_RATE	22050
 #ifdef WINDOWS
-#define SLEEP	Sleep(5)
 #include <windef.h>
 #include <winbase.h>
 #define AUDIOBUFLEN	4096
 #else
-#define SLEEP	usleep(5e3)
 #define AUDIOBUFLEN	1024
 #endif
+
+#define SLEEP SDL_Delay(5)
 
 #include "bits.h"
 #ifdef WAVLIB
