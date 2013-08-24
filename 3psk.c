@@ -594,6 +594,13 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Starting main loop\n");
 	while(!errupt)
 	{
+		#ifdef WINDOWS
+		if(G.moni&&*G.moni)
+		{
+			fprintf(stderr, "MONI causes lockups on Windows; disabling\n");
+			*G.moni=false;
+		}
+		#endif
 		int16_t si;
 		bool havesi=false;
 		bool havetx=cantx(&txaud);
