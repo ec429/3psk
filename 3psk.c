@@ -52,6 +52,7 @@ int main(int argc, char **argv)
 	for(unsigned int i=0;i<6;i++)
 		init_macro[i][0]=0;
 	const char *wavrx=NULL;
+	bool textout=false;
 	const char *conffile=NULL;
 	sample_rate=SAMPLE_RATE;
 	for(int arg=1;arg<argc;arg++)
@@ -300,6 +301,10 @@ int main(int argc, char **argv)
 						init_afc=true;
 					else if(strcmp(line, "!AFC")==0)
 						init_afc=false;
+					else if(strcmp(line, "TEXT")==0)
+						textout=true;
+					else if(strcmp(line, "!TEXT")==0)
+						textout=false;
 					else if(strcmp(line, "Au.SDLBUF")==0)
 					{
 						if(colon)
@@ -435,6 +440,14 @@ int main(int argc, char **argv)
 		{
 			init_afc=false;
 		}
+		else if(strcmp(argv[arg], "--text")==0)
+		{
+			textout=true;
+		}
+		else if(strcmp(argv[arg], "--no-text")==0)
+		{
+			textout=false;
+		}
 		else if(strncmp(argv[arg], "--rx=", 5)==0)
 		{
 			wavrx=argv[arg]+5;
@@ -449,6 +462,7 @@ int main(int argc, char **argv)
 	if(!setrxf) rxf=init_txf;
 	fprintf(stderr, "Constructing GUI\n");
 	gui G;
+	SDL_Surface *eye_back;
 	{
 		int e;
 		if((e=make_gui(&G, &bws)))
@@ -508,13 +522,21 @@ int main(int argc, char **argv)
 		for(unsigned int i=0;i<NMACROS;i++)
 			if(G.macro[i])
 				snprintf(G.macro[i], MACROLEN, "%s", init_macro[i]);
+		eye_back=SDL_CreateRGBSurface(SDL_SWSURFACE, 90, 84, G.eye_img->format->BitsPerPixel, G.eye_img->format->Rmask, G.eye_img->format->Gmask, G.eye_img->format->Bmask, G.eye_img->format->Amask);
+		SDL_SetAlpha(eye_back, SDL_SRCALPHA, 48);
+		SDL_FillRect(eye_back, NULL, SDL_MapRGB(eye_back->format,  EYE_BG.r,  EYE_BG.g,  EYE_BG.b));
 	}
 	
 	unsigned int inp=NMACROS;
 	
 	fprintf(stderr, "Starting audio subsystem\n");
 	FILE *rwf=NULL;
-	if(wavrx) rwf=fopen(wavrx, "rb");
+	if(wavrx)
+	{
+		rwf=fopen(wavrx, "rb");
+		if(!rwf)
+			perror("--rx: fopen");
+	}
 	audiobuf rxaud, txaud;
 	if(init_audiorx(&rxaud, rxbuflen, sdlbuflen, rwf)) {fprintf(stderr, "Failed to initialise RX AudIO\n"); return(1);}
 	if(init_audiotx(&txaud, txbuflen, sdlbuflen)) {fprintf(stderr, "Failed to initialise TX AudIO\n"); return(1);}
@@ -721,6 +743,20 @@ int main(int argc, char **argv)
 				fftw_execute(p[bws]);
 				int x,y;
 				double oldphi=carg(oldz), newphi=carg(fftout[k]);
+				double rbar=min((cabs(oldz)+cabs(fftout[k]))*250/blklen, 159);
+				static unsigned int delt=0;
+				static bool last;
+				if(delt<30)
+				{
+					if(delt)
+						line(G.eye_img, (delt-1)*3, (last?0:oldphi)*13+42, delt*3, newphi*13+42, (atg_colour){rbar*0.5, rbar*0.9, rbar*1.6, ATG_ALPHA_OPAQUE});
+				}
+				else if((delt>300)&&(rbar>20))
+					delt=0;
+				if(!delt)
+					SDL_BlitSurface(eye_back, NULL, G.eye_img, NULL);
+				delt++;
+				last=false;
 				if((0<oldphi)&&(oldphi<M_PI/3.0)&&(newphi>M_PI/3.0)) crossed[0]=true;
 				if((0>oldphi)&&(oldphi>-M_PI/3.0)&&(newphi<-M_PI/3.0)) crossed[1]=true;
 				ztoxy(points[frame%CONSDLEN], gsf, &x, &y);
@@ -742,6 +778,9 @@ int main(int argc, char **argv)
 				oldz=fftout[k];
 				if((lined[frame%CONSDLEN]=(green&&enough&&(fch||spd))))
 				{
+					if(delt>=30)
+						delt=0;
+					last=true;
 					rxdphi-=da;
 					line(G.constel_img, x, y, 60, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
 					line(G.phasing_img, 0, 60, G.phasing_img->w, 60, (atg_colour){0, 191, 191, ATG_ALPHA_OPAQUE});
@@ -800,6 +839,7 @@ int main(int argc, char **argv)
 						size_t tp=strlen(G.outtext[OUTLINES-1]);
 						for(const char *p=text;*p;p++)
 						{
+							if(textout) putchar(*p);
 							if((*p=='\n')||(tp>OUTLINELEN))
 							{
 								for(unsigned int i=0;i<OUTLINES-1;i++)

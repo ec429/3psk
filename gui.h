@@ -21,7 +21,7 @@
 typedef struct
 {
 	atg_canvas *canvas;
-	SDL_Surface *constel_img, *phasing_img, *spectro_img;
+	SDL_Surface *constel_img, *phasing_img, *spectro_img, *eye_img;
 	bool *tx, *moni, *afc, *spl;
 	unsigned int *bwsel;
 	atg_element *bw, *txb, *txf, *rxf, *rxs, *amp;
@@ -39,6 +39,7 @@ gui;
 #define CONS_BG	(atg_colour){31, 31, 15, ATG_ALPHA_OPAQUE}
 #define PHAS_BG	(atg_colour){15, 31, 31, ATG_ALPHA_OPAQUE}
 #define SPEC_BG	(atg_colour){ 7,  7, 23, ATG_ALPHA_OPAQUE}
+#define EYE_BG	(atg_colour){15, 15,  7, ATG_ALPHA_OPAQUE}
 
 extern const char *set_tbl[6];
 

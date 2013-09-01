@@ -76,11 +76,18 @@ int make_gui(gui *buf, unsigned int *bws)
 		fprintf(stderr, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
 		return(1);
 	}
+	buf->eye_img=SDL_CreateRGBSurface(SDL_SWSURFACE, 90, 84, buf->canvas->surface->format->BitsPerPixel, buf->canvas->surface->format->Rmask, buf->canvas->surface->format->Gmask, buf->canvas->surface->format->Bmask, buf->canvas->surface->format->Amask);
+	if(!buf->eye_img)
+	{
+		fprintf(stderr, "SDL_CreateRGBSurface failed: %s\n", SDL_GetError());
+		return(1);
+	}
 	else
 	{
 		SDL_FillRect(buf->constel_img, &(SDL_Rect){0, 0, 120, 120}, SDL_MapRGB(buf->constel_img->format, CONS_BG.r, CONS_BG.g, CONS_BG.b));
 		SDL_FillRect(buf->phasing_img, &(SDL_Rect){0, 0, 100, 120}, SDL_MapRGB(buf->phasing_img->format, PHAS_BG.r, PHAS_BG.g, PHAS_BG.b));
 		SDL_FillRect(buf->spectro_img, &(SDL_Rect){0, 0, 160,  60}, SDL_MapRGB(buf->spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
+		SDL_FillRect(buf->    eye_img, &(SDL_Rect){0, 0,  90,  84}, SDL_MapRGB(buf->    eye_img->format,  EYE_BG.r,  EYE_BG.g,  EYE_BG.b));
 		atg_box *db=decoder->elem.box;
 		if(!db)
 		{
@@ -422,6 +429,18 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
+		atg_element *set_and_eye=atg_create_element_box(ATG_BOX_PACK_HORIZONTAL, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
+		if(!set_and_eye)
+		{
+			fprintf(stderr, "atg_create_element_box failed\n");
+			return(1);
+		}
+		if(atg_pack_element(b, set_and_eye))
+		{
+			perror("atg_pack_element");
+			return(1);
+		}
+		b=set_and_eye->elem.box;
 		atg_element *set_tbl=atg_create_element_box(ATG_BOX_PACK_VERTICAL, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
 		if(!set_tbl)
 		{
@@ -453,6 +472,18 @@ int make_gui(gui *buf, unsigned int *bws)
 				perror("atg_pack_element");
 				return(1);
 			}
+		}
+		b=set_and_eye->elem.box;
+		atg_element *eye=atg_create_element_image(buf->eye_img);
+		if(!eye)
+		{
+			fprintf(stderr, "atg_create_element_image failed\n");
+			return(1);
+		}
+		if(atg_pack_element(b, eye))
+		{
+			perror("atg_pack_element");
+			return(1);
 		}
 	}
 	for(unsigned int i=0;i<OUTLINES;i++)
