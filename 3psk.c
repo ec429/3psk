@@ -22,6 +22,7 @@
 #include "gui.h"
 #include "frontend.h"
 #include "audio.h"
+#include "ptt.h"
 
 #define CONSLEN	256
 #define CONSDLEN	((int)floor(CONSLEN*min(bw, 750)/750))
@@ -55,6 +56,7 @@ int main(int argc, char **argv)
 	bool textout=false;
 	const char *conffile=NULL;
 	sample_rate=SAMPLE_RATE;
+	struct ptt_settings ptt={.devpath=NULL, .devfd=-1, .inverted=false, .line=PTT_LINE_NONE};
 	for(int arg=1;arg<argc;arg++)
 	{
 		if(strncmp(argv[arg], "--conf=", 7)==0)
@@ -353,6 +355,52 @@ int main(int argc, char **argv)
 							return(1);
 						}
 					}
+					else if(strcmp(line, "!Ptt")==0)
+					{
+						ptt.line=PTT_LINE_NONE;
+					}
+					else if(strcmp(line, "Ptt.DEV")==0)
+					{
+						if(colon)
+						{
+							ptt.devpath=strdup(colon);
+						}
+						else
+						{
+							fprintf(stderr, "Bad Ptt.DEV in conffile: no argument\n");
+							return(1);
+						}
+					}
+					else if(strcmp(line, "Ptt.INV")==0)
+					{
+						ptt.inverted=true;
+					}
+					else if(strcmp(line, "Ptt.!INV")==0)
+					{
+						ptt.inverted=false;
+					}
+					else if(strcmp(line, "Ptt.LINE")==0)
+					{
+						if(colon)
+						{
+							if(strcmp(colon, "RTS")==0)
+								ptt.line=PTT_LINE_RTS;
+							else if(strcmp(colon, "DTR")==0)
+								ptt.line=PTT_LINE_DTR;
+							else if(strcmp(colon, "BOTH")==0)
+								ptt.line=PTT_LINE_BOTH;
+							else
+							{
+								fprintf(stderr, "Bad Ptt.LINE in conffile: unrecognised value \"%s\"\n", colon);
+								return(1);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Bad Ptt.LINE in conffile: no argument\n");
+							return(1);
+						}
+					}
 					else
 					{
 						fprintf(stderr, "conffile: ignoring unrecognised line: %s:%s\n", line, colon);
@@ -452,6 +500,10 @@ int main(int argc, char **argv)
 		{
 			wavrx=argv[arg]+5;
 		}
+		else if(strncmp(argv[arg], "--conf=", 7)==0)
+		{
+			// nothing
+		}
 		else
 		{
 			fprintf(stderr, "Unrecognised arg `%s'\n", argv[arg]);
@@ -526,6 +578,10 @@ int main(int argc, char **argv)
 		SDL_SetAlpha(eye_back, SDL_SRCALPHA, 48);
 		SDL_FillRect(eye_back, NULL, SDL_MapRGB(eye_back->format,  EYE_BG.r,  EYE_BG.g,  EYE_BG.b));
 	}
+	
+	int e;
+	if((e=ptt_open(&ptt)))
+		fprintf(stderr, "Failed to open PTT: %d\n", e);
 	
 	unsigned int inp=NMACROS;
 	
@@ -613,12 +669,20 @@ int main(int argc, char **argv)
 	
 	int errupt=0;
 	unsigned long t=0, txt=0, frame=0, lastflip=0;
+	bool wastx=true;
 	fprintf(stderr, "Starting main loop\n");
 	while(!errupt)
 	{
 		int16_t si;
 		bool havesi=false;
 		bool havetx=cantx(&txaud);
+		bool istx=(G.tx&&*G.tx)||txlead;
+		if(istx!=wastx)
+		{
+			if((e=ptt_set(istx, &ptt)))
+				fprintf(stderr, "Failed to set PTT %s: %d\n", istx?"true":"false", e);
+		}
+		wastx=istx;
 		#ifndef WINDOWS
 		if(G.moni&&*G.moni&&((G.tx&&*G.tx)||txlead))
 			rxsample(&rxaud, NULL);
@@ -1150,6 +1214,9 @@ int main(int argc, char **argv)
 		if(!(havetx||havesi))
 			SLEEP;
 	}
+	if((e=ptt_close(&ptt)))
+		fprintf(stderr, "Failed to close PTT: %d\n", e);
+	free(ptt.devpath);
 	fprintf(stderr, "\nShutting down audio subsystem\n");
 	stop_audiorx(&rxaud);
 	stop_audiotx(&txaud);
