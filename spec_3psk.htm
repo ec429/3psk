@@ -9,7 +9,8 @@
 <h1>3PSK Specification</h1>
 <h5>3PSK is a datamode for amateur radio, based on PSK</h5>
 <p>This is the specification of the 3PSK datamode.  For the user manual for the 3psk software, see the <a href="readme.htm">readme</a>.</p>
-<p>This is version 0.4, dated 19th August 2013.</p>
+<p>This is version 0.4.1, dated 6th October 2013.</p>
+<p>Author: Edward Cree, M0TBK.</p>
 </div><!--#title-->
 <div id="abstract">
 <h2>Abstract</h2>
@@ -62,7 +63,7 @@
 <h2>Testing</h2>
 <p>A previous implementation of 3PSK was tested 'on air', but the tests were not a great success owing to the poor user interface - the operator at the other end struggled to get it to work properly.  However, a few fragments of text were copied successfully.</p>
 <p>The current implementation was then tested locally by means of acoustic coupling (and still more directly by the 'monitor' facility).  It seemed capable of stable decoding at baud rates ranging from 1 baud to 400 baud, although at the upper end it becomes increasingly finicky and the error rate rises to about 2%.  A more realistic upper limit is 300 baud.</p>
-<p>The next phase was to again test over an RF link; this proved unsuccessful due to the poor <acronym title="Automatic Frequency Control">AFC</acronym> capabilities of the decoder at that time, preventing it from 'locking on' to the received signal.  The AFC has since been improved (with a 'coarse' mode based on winding to complement the existing 'fine' mode based on transitions), and further testing is planned.</p>
+<p>The next phase was to again test over an RF link; this proved unsuccessful due to the poor <acronym title="Automatic Frequency Control">AFC</acronym> capabilities of the decoder at that time, preventing it from 'locking on' to the received signal.  The AFC was then improved (with a 'coarse' mode based on winding to complement the existing 'fine' mode based on transitions).  As the author did not at that time have an operational station, this was tested by having a colleague send a 3PSK signal over a radio link and record it, then supplying this recording to 3psk; this was successful.  The author is now back on the air and an attempt at a full 3PSK QSO is imminent.</p>
 </div><!--#testing-->
 <div id="conclusion">
 <h2>Conclusion</h2>
