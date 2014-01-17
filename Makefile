@@ -2,7 +2,7 @@
 CC := gcc
 CFLAGS := -Wall -Wextra -Werror -pedantic -std=gnu99 -g `sdl-config --cflags`
 LIBS := -lm -lfftw3 `sdl-config --libs` -lSDL_ttf -lSDL_audioin -latg
-OBJS := bits.o varicode.o strbuf.o gui.o audio.o ptt.o # wavlib/wavlib.o wavlib/bits.o
+OBJS := bits.o varicode.o strbuf.o gui.o audio.o ptt.o
 INCLUDES := $(OBJS:.o=.h) frontend.h
 VERSION := `git describe --tags`
 

@@ -3,7 +3,7 @@ CC := i586-mingw32msvc-gcc
 CFLAGS := -Wall -Wextra -Werror --std=gnu99 -g -L. `/usr/i586-mingw32msvc/bin/sdl-config --cflags` -Wfatal-errors
 CPPFLAGS := -DWINDOWS
 LIBS := -lm -lfftw3-3 -lSDL_ttf -lSDL_audioin SDL_audioin.dll -latg  `/usr/i586-mingw32msvc/bin/sdl-config --libs`
-OBJS := bits.o varicode.o strbuf.o gui.o audio.o
+OBJS := bits.o varicode.o strbuf.o gui.o audio.o ptt.o
 INCLUDES := $(OBJS:.o=.h) frontend.h
 VERSION := `git describe --tags`
 
