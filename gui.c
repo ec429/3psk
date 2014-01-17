@@ -322,7 +322,7 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->txb=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 600, 1, 0, "TXB %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		buf->txb=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 600, 1, 0, "TXB  %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!buf->txb)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -334,7 +334,7 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, 0, "TXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		buf->txf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 8000, 5, 0, "TXF %04d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!buf->txf)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -346,7 +346,7 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->rxf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 800, 1, 0, "RXF %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		buf->rxf=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 200, 8000, 5, 0, "RXF %04d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!buf->rxf)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -358,7 +358,7 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->rxs=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 1, 64, 1, 0, "RXS %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		buf->rxs=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_STEP10, 1, 64, 1, 0, "RXS  %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!buf->rxs)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -370,7 +370,7 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		buf->amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, 0, "AMP %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
+		buf->amp=atg_create_element_spinner(ATG_SPINNER_RIGHTCLICK_TIMES2, 1, 25, 1, 0, "AMP  %03d", (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE}, (atg_colour){15, 15, 15, ATG_ALPHA_OPAQUE});
 		if(!buf->amp)
 		{
 			fprintf(stderr, "atg_create_element_spinner failed\n");
@@ -382,7 +382,7 @@ int make_gui(gui *buf, unsigned int *bws)
 			perror("atg_pack_element");
 			return(1);
 		}
-		atg_element *baud_label=atg_create_element_label("RXB 000", 15, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
+		atg_element *baud_label=atg_create_element_label("RXB  000", 15, (atg_colour){255, 255, 255, ATG_ALPHA_OPAQUE});
 		if(!baud_label)
 		{
 			fprintf(stderr, "atg_create_element_label failed\n");

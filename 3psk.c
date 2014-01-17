@@ -1,7 +1,7 @@
 /*
 	3psk - 3-pole Phase Shift Keying
 	
-	Copyright (c) Edward Cree, 2012
+	Copyright (c) Edward Cree, 2012-14
 	Licensed under the GNU GPL v3+
 */
 
@@ -39,10 +39,10 @@ void ztoxy(fftw_complex z, double gsf, int *x, int *y);
 
 int main(int argc, char **argv)
 {
-	unsigned int init_txf=440; // centre frequency, Hz
+	unsigned int init_txf=1800; // centre frequency, Hz
 	double rxf=init_txf;
 	bool setrxf=false;
-	double aif=3000; // approximate IF, Hz
+	double aif=4500; // approximate IF, Hz
 	unsigned int init_rxs=28;
 	unsigned int init_amp=10;
 	bool init_moni=true, init_afc=false;
@@ -615,7 +615,7 @@ int main(int argc, char **argv)
 	fprintf(stderr, "frontend: Actual IF: %g Hz\n", truif);
 	fftw_complex *fftin=fftw_malloc(sizeof(fftw_complex)*floor(rxaud.srate/(double)bandwidths[0]));
 	fftw_complex *fftout=fftw_malloc(sizeof(fftw_complex)*floor(rxaud.srate/(double)bandwidths[0]));
-	unsigned long speclen=max(floor(rxaud.srate/5.0), 360), spechalf=(speclen>>1)+1;
+	unsigned long speclen=max(floor(rxaud.srate/25.0), 360), spechalf=(speclen>>1)+1;
 	double spec_hpp=rxaud.srate/(double)speclen;
 	double *specin=fftw_malloc(sizeof(double)*speclen);
 	fftw_complex *specout=fftw_malloc(sizeof(fftw_complex)*spechalf);
@@ -781,7 +781,8 @@ int main(int argc, char **argv)
 			{
 				fftw_execute(sp_p);
 				SDL_FillRect(G.spectro_img, &(SDL_Rect){0, 0, 160, 60}, SDL_MapRGB(G.spectro_img->format, SPEC_BG.r, SPEC_BG.g, SPEC_BG.b));
-				for(unsigned int h=1;h<9;h++)
+				int step=max(1, spec_hpp/6);
+				for(unsigned int h=0;h<40;h+=step)
 				{
 					unsigned int x=floor(h*100/spec_hpp)-20;
 					line(G.spectro_img, x, 0, x, 59, (atg_colour){31, 31, 31, ATG_ALPHA_OPAQUE});
@@ -859,7 +860,7 @@ int main(int argc, char **argv)
 					line(G.phasing_img, st_ptr*G.phasing_img->w/PHASLEN, py, (st_ptr+1)*G.phasing_img->w/PHASLEN, py, (da>0)?(atg_colour){255, 191, 255, ATG_ALPHA_OPAQUE}:(atg_colour){255, 255, 127, ATG_ALPHA_OPAQUE});
 					unsigned int dt=t-symtime[st_ptr];
 					double baud=rxaud.srate*(st_loop?PHASLEN:st_ptr)/(double)dt;
-					snprintf(G.bauds, 8, "RXB %03d", (int)floor(baud+.5));
+					snprintf(G.bauds, 9, "RXB  %03d", (int)floor(baud+.5));
 					symtime[st_ptr]=t;
 					st_ptr=(st_ptr+1)%PHASLEN;
 					if(!st_ptr) st_loop=true;
@@ -1118,10 +1119,10 @@ int main(int argc, char **argv)
 										switch(click.button)
 										{
 											case ATG_MB_LEFT:
-												setspinval(G.txf, min(max((click.pos.x+20)*spec_hpp, 200), 800));
+												setspinval(G.txf, min(max((click.pos.x+20)*spec_hpp, 200), 8000));
 												/* fallthrough */
 											case ATG_MB_RIGHT:
-												rxf=min(max((click.pos.x+20)*spec_hpp, 200), 800);
+												rxf=min(max((click.pos.x+20)*spec_hpp, 200), 8000);
 												setspinval(G.rxf, floor(rxf+.5));
 											break;
 											default:
