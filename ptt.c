@@ -8,7 +8,34 @@
 */
 
 #include "ptt.h"
+
 #include <stdio.h>
+#ifdef WINDOWS
+/* dummy definitions - PTT not supported */
+int ptt_open(struct ptt_settings *set)
+{
+	if(!set)
+		return(1);
+	if(!set->line)
+	{
+		fprintf(stderr, "PTT: not configured\n");
+		return(0);
+	}
+	fprintf(stderr, "PTT: not supported on Windows\n");
+	return(0);
+}
+
+int ptt_set(__attribute__((unused)) bool tx, __attribute__((unused)) const struct ptt_settings *set)
+{
+	return(0);
+}
+
+int ptt_close(__attribute__((unused)) struct ptt_settings *set)
+{
+	return(0);
+}
+
+#else /* !WINDOWS */
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -79,3 +106,4 @@ int ptt_close(struct ptt_settings *set)
 	set->devfd=-1;
 	return(0);
 }
+#endif /* !WINDOWS */
