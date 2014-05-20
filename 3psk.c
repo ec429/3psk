@@ -30,10 +30,11 @@
 #define PHASLEN	25
 
 #define txstart(lead)	if(G.tx&&!*G.tx) { *G.tx=true; txlead=max(txb(G), (lead)); }
-#define txb(G)	(((G).txb&&(G).txb->elem.spinner)?(G).txb->elem.spinner->value:0)
-#define txf(G)	(((G).txf&&(G).txf->elem.spinner)?(G).txf->elem.spinner->value:0)
-#define rxs(G)	(((G).rxs&&(G).rxs->elem.spinner)?(G).rxs->elem.spinner->value:0)
-#define amp(G)	(((G).amp&&(G).amp->elem.spinner)?(G).amp->elem.spinner->value:0)
+#define read_spinner(G,name)	(((G).name&&(G).name->elemdata)?((atg_spinner *)(G).name->elemdata)->value:0)
+#define txb(G)	read_spinner(G,txb)
+#define txf(G)	read_spinner(G,txf)
+#define rxs(G)	read_spinner(G,rxs)
+#define amp(G)	read_spinner(G,amp)
 
 void ztoxy(fftw_complex z, double gsf, int *x, int *y);
 
